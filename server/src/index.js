@@ -20,7 +20,7 @@ function serveFile(res, file) {
     res.writeHead(200, {'Content-Type': MIME[path.extname(file)] || 'text/plain'}); res.end(data); });
 }
 
-const server = http.createServer(async (req, res) => {
+const handler = async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
 
@@ -151,5 +151,10 @@ const server = http.createServer(async (req, res) => {
   const staticFile = path.join(ROOT, p.replace(/^\//,''));
   if (staticFile.startsWith(ROOT) && fs.existsSync(staticFile)) return serveFile(res, staticFile);
   res.writeHead(404); res.end('Not found');
-});
-server.listen(PORT, () => console.log(`DriverDost MVP running at http://localhost:${PORT}  (/ customer, /driver, /admin)`));
+};
+
+// Run as a normal server locally / on Render & Railway; export the handler for Vercel serverless.
+if (require.main === module) {
+  http.createServer(handler).listen(PORT, () => console.log(`DriverDost MVP running at http://localhost:${PORT}  (/ customer, /driver, /admin)`));
+}
+module.exports = handler;
