@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DriverDost Admin — Login</title>
+<style>body{font-family:system-ui;margin:0;background:#f8fafc;color:#0f172a}main{max-width:960px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px}.big{font-size:28px;font-weight:800}input,button{width:100%;padding:12px;margin:6px 0;border-radius:9px;border:1px solid #cbd5e1}button{background:#f59e0b;font-weight:700;cursor:pointer;border:0}.hidden{display:none}</style></head>
+<body><main>
+<!-- LOGIN / FIRST-TIME SETUP -->
+<section id="gate" class="card">
+  <h1>🔒 DriverDost Admin Login</h1>
+  <div id="setup" class="hidden"><p>No admin account yet — create the first one:</p>
+    <input id="s_name" placeholder="Full name"><input id="s_user" placeholder="Username">
+    <input id="s_phone" placeholder="Phone number (10-digit)"><input id="s_pass" type="password" placeholder="Password (min 6 chars)">
+    <button onclick="register()">Create Admin Account</button></div>
+  <div id="login"><p>Log in with your <b>username or phone number</b> + password:</p>
+    <input id="l_id" placeholder="Username or phone number"><input id="l_pass" type="password" placeholder="Password">
+    <button onclick="login()">Login</button></div>
+  <p id="msg" style="color:#dc2626"></p>
+</section>
+<!-- DASHBOARD (hidden until logged in) -->
+<section id="dash" class="hidden">
+  <h1>Admin Dashboard — DriverDost</h1><p id="who"></p><button onclick="logout()" style="width:auto">Logout</button>
+  <div class="grid" id="stats">Loading…</div><h2>All Bookings</h2><div id="bookings"></div>
+</section></main>
+<script>
+let token = localStorage.getItem('dm_admin_token') || '';
+const H = () => ({ 'Content-Type':'application/json', 'Authorization':'Bearer '+token });
+async function check(){ const s = await (await fetch('/api/admin/status',{headers:H()})).json();
+  setup.classList.toggle('hidden', s.hasAdmin); login.classList.toggle('hidden', !s.hasAdmin);
+  if (token && s.loggedIn) showDash(); }
+async function register(){ const r = await fetch('/api/admin/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:s_name.value,username:s_user.value,phone:s_phone.value,password:s_pass.value})}); const d = await r.json();
+  if(!r.ok){ msg.textContent = d.error; return; } token = d.token; localStorage.setItem('dm_admin_token',token); showDash(); }
+async function login(){ const r = await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:l_id.value,password:l_pass.value})}); const d = await r.json();
+  if(!r.ok){ msg.textContent = d.error; return; } token = d.token; localStorage.setItem('dm_admin_token',token); who.dataset.name=d.admin.username; showDash(); }
+async function logout(){ await fetch('/api/admin/logout',{method:'POST',headers:H()}); token=''; localStorage.removeItem('dm_admin_token'); location.reload(); }
+async function showDash(){ gate.classList.add('hidden'); dash.classList.remove('hidden');
+  const s = await (await fetch('/api/admin/stats',{headers:H()})).json();
+  if (s.error){ msg.textContent=s.error; return; }
+  const items=[['Total Bookings',s.totalBookings],['Active',s.activeBookings],['Completed',s.completedBookings],['Verified Drivers',s.verifiedDrivers],['Booking Value','₹'+s.totalBookingValue],['Platform Revenue','₹'+s.platformRevenue],['Pending Verifications',s.pendingVerifications],['Open Incidents',s.openIncidents]];
+  stats.innerHTML = items.map(([k,v])=>`<div class="card"><div class="big">${v}</div>${k}</div>`).join('');
+  const bs = await (await fetch('/api/bookings')).json();
+  bookings.innerHTML = bs.map(b=>`<div class="card">#${b.id} ${b.customerName} — ${b.serviceType} — ${b.pickup} — ${b.status} — ₹${b.total}</div>`).join('') || 'No bookings yet.'; }
+check();
+</script></body></html>

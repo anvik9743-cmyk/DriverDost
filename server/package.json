@@ -1,0 +1,1 @@
+{"description":"DriverDost lean MVP API - zero dependencies","engines":{"node":">=18"},"main":"src/index.js","name":"driverdost-server","private":true,"scripts":{"dev":"node --watch src/index.js","start":"node src/index.js"},"version":"0.1.0"}

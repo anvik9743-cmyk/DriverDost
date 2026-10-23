@@ -1,0 +1,9 @@
+// Prisma schema — mirrors database/schema.sql
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+model User { id Int @id @default(autoincrement()) name String phone String @unique email String? @unique role String bookings Booking[] @relation("customer") createdAt DateTime @default(now()) }
+model DriverProfile { id Int @id @default(autoincrement()) userId Int experienceYears Int languages String[] approvalStatus String @default("pending") reliabilityScore Decimal @default(0) transmissions String[] bookings Booking[] }
+model Booking { id Int @id @default(autoincrement()) customerId Int driverId Int? pickup String destination String? serviceType String hours Decimal status String @default("REQUESTED") total Int driverEarnings Int platformCommission Int customer User @relation("customer", fields:[customerId], references:[id]) driver DriverProfile? @relation(fields:[driverId], references:[id]) createdAt DateTime @default(now()) }
+model Payment { id Int @id @default(autoincrement()) bookingId Int amount Int paymentStatus String gatewayRef String? }
+model Review { id Int @id @default(autoincrement()) bookingId Int customerRating Int? driverRating Int? comment String? }
+model Incident { id Int @id @default(autoincrement()) bookingId Int incidentType String status String @default("open") createdAt DateTime @default(now()) }

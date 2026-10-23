@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DriverDost — Your Car. Your Driver. Your Convenience.</title>
+<style>body{font-family:system-ui;margin:0;background:#0f172a;color:#f8fafc}header,main{max-width:960px;margin:auto;padding:20px}.card{background:#1e293b;border-radius:14px;padding:18px;margin:14px 0}input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:9px;border:0}button{background:#f59e0b;font-weight:700;cursor:pointer}.driver{display:flex;gap:12px;align-items:center}.badge{background:#14532d;padding:3px 8px;border-radius:99px;font-size:12px}</style></head>
+<body><header><h1>🚗 DriverDost</h1><p>Your Car. Your Driver. Your Convenience.<br>Book verified drivers in Bengaluru for hourly trips, airport, weddings & full days — from ₹129/hr, no hidden charges.</p>
+<nav><a href="/" style="color:#fbbf24">Customer</a> · <a href="/driver" style="color:#fbbf24">Driver App</a> · <a href="/admin" style="color:#fbbf24">Admin</a></nav></header>
+<main>
+<section class="card"><h2>Book a Driver</h2>
+<input id="name" placeholder="Your name"><input id="pickup" placeholder="Pickup — e.g. Indiranagar, Bengaluru">
+<input id="dest" placeholder="Destination (optional)">
+<select id="service"><option>Hourly</option><option>Airport Transfer</option><option>Wedding</option><option>Full Day</option><option>One Way</option><option>Round Trip</option><option>Scheduled</option><option>Family Booking</option></select>
+<select id="trans"><option>Manual</option><option>Automatic</option></select>
+<label>Hours <input id="hours" type="number" value="3" min="1" max="12"></label>
+<p id="quote">3 hrs @ ₹149/hr = ₹447 (Driver ₹358 + Platform ₹89)</p>
+<button onclick="book()">Book Driver</button><p id="result"></p></section>
+<section class="card"><h2>Verified Drivers Near You — tap a driver for full details</h2><div id="drivers">Loading…</div><div id="driverDetail"></div></section>
+<section class="card"><h2>Become a Driver — ID verification required</h2><p>New drivers are <b>not</b> added instantly. You apply with a government ID + licence, an admin verifies your ID, and only then do you appear here for customers.</p>
+<input id="d_name" placeholder="Full name"><input id="d_phone" placeholder="Phone number">
+<select id="d_idtype"><option>Aadhaar</option><option>Driving Licence</option><option>PAN</option></select>
+<input id="d_idnum" placeholder="Government ID number"><input id="d_lic" placeholder="Driving licence number">
+<input id="d_exp" type="number" placeholder="Years of experience" value="5">
+<button onclick="applyDriver()">Apply — Submit ID for Verification</button><p id="applyResult"></p></section>
+<section class="card"><h2>How It Works</h2><ol><li>Choose your trip</li><li>Get matched with a verified driver (ID, licence & background checked)</li><li>Enjoy the journey in your own car — SOS, live tracking & pre-trip vehicle inspection included</li></ol></section>
+</main>
+<script>
+const rate=h=>h>=8?129:h>=4?139:149;const q=()=>{const h=+hours.value||1,r=rate(h),t=h*r,d=Math.round(t*0.8);quote.textContent=`${h} hrs @ ₹${r}/hr = ₹${t} (Driver ₹${d} + Platform ₹${t-d})`};hours.oninput=q; q();
+let DRIVERS=[];
+async function load(){DRIVERS=await(await fetch('/api/drivers')).json();drivers.innerHTML=DRIVERS.map((x,i)=>`<div class="driver" onclick="showDriver(${i})" style="cursor:pointer"><b>${x.photo}</b><div><b>${x.name}</b> · ${x.profileId} · ★${x.rating} · ${x.trips} trips · ${x.experienceYears} yrs exp · Reliability ${x.reliabilityScore}/100 · ${x.distanceKm} km away<br>${x.languages.join(', ')} · ${x.transmissions.join(' + ')}<br>${x.badges.map(b=>`<span class="badge">✓ ${b}</span>`).join(' ')} <span class="badge">✓ ID Verified (${x.govtId.type} ${x.govtId.masked})</span></div></div><hr>`).join('')}
+function showDriver(i){const x=DRIVERS[i];driverDetail.innerHTML=`<div class="card" style="background:#0f172a"><h3>${x.name} — Full Driver Details</h3><p>Driver ID: ${x.profileId} · Rating: ★${x.rating} · Trips completed: ${x.trips}<br>Experience: ${x.experienceYears} years · Languages: ${x.languages.join(', ')}<br>Drives: ${x.transmissions.join(' + ')} · Reliability score: ${x.reliabilityScore}/100 · Distance: ${x.distanceKm} km<br>Government ID: ${x.govtId.type} ${x.govtId.masked} — ✓ Verified · Licence: ${x.licenceMasked} — ✓ Verified<br><i>Full ID numbers are never shown to customers, only verified status and a masked reference.</i></p></div>`}
+async function applyDriver(){const r=await fetch('/api/drivers/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:d_name.value,phone:d_phone.value,govtIdType:d_idtype.value,govtIdNumber:d_idnum.value,licenceNumber:d_lic.value,experienceYears:+d_exp.value})});const d=await r.json();applyResult.textContent=r.ok?`✅ Application #${d.id} received — status: ${d.status}. An admin will verify your ID before you are added as a driver.`:'Error: '+d.error}
+async function book(){const r=await fetch('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:name.value,pickup:pickup.value,destination:dest.value,serviceType:service.value,transmission:trans.value,hours:+hours.value})});const b=await r.json();if(!r.ok){result.textContent='Error: '+b.error;return}const drv=DRIVERS.find(d=>d.id===b.driverId);result.innerHTML=`✅ Booking #${b.id} confirmed — ${b.status}, Total ₹${b.total}.<br><b>Your driver:</b> ${drv?`${drv.name} (${drv.profileId}) · ★${drv.rating} · ${drv.experienceYears} yrs · ${drv.govtId.type} ${drv.govtId.masked} ✓ ID Verified`:('Driver ID '+b.driverId)} — best match. See it in Driver & Admin views.`}
+load();
+</script></body></html>
