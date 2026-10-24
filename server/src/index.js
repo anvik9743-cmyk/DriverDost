@@ -117,6 +117,38 @@ const server = http.createServer(async (req, res) => {
     return json(res, 400, { success: false, error: 'Incorrect OTP. Ask the customer for the 4-digit code.' });
   }
 
+  // Digital Vehicle Inspection (Pre-trip / Post-trip)
+  const inspm = p.match(/^\/api\/bookings\/(\d+)\/inspect$/);
+  if (inspm && req.method === 'POST') {
+    const b = await body(req);
+    const booking = store.bookings.find(x => x.id === Number(inspm[1]));
+    if (!booking) return json(res, 404, { error: 'booking not found' });
+    booking.inspection = {
+      odometerKm: Number(b.odometerKm) || 0,
+      fuelLevelPercent: Number(b.fuelLevelPercent) || 100,
+      existingScratches: b.existingScratches || 'None reported',
+      photosCount: Number(b.photosCount) || 4,
+      verifiedByDriver: true,
+      timestamp: new Date().toISOString()
+    };
+    booking.status = 'INSPECTION_COMPLETED';
+    return json(res, 200, { success: true, message: 'Digital vehicle inspection logged.', inspection: booking.inspection, booking });
+  }
+
+  // Driver Duty Status Toggle (Online/Offline)
+  const drvStatusm = p.match(/^\/api\/drivers\/(\d+)\/status$/);
+  if (drvStatusm && req.method === 'POST') {
+    const b = await body(req);
+    const drv = store.drivers.find(x => x.id === Number(drvStatusm[1]));
+    if (!drv) return json(res, 404, { error: 'driver not found' });
+    drv.online = b.online !== undefined ? !!b.online : !drv.online;
+    if (store.liveTelemetry[drv.id]) {
+      store.liveTelemetry[drv.id].status = drv.online ? 'ONLINE' : 'OFFLINE';
+      store.liveTelemetry[drv.id].updatedAt = new Date().toISOString();
+    }
+    return json(res, 200, { success: true, driverId: drv.id, online: drv.online });
+  }
+
   // Emergency SOS Trigger
   const sosMatch = p.match(/^\/api\/bookings\/(\d+)\/sos$/);
   if (sosMatch && req.method === 'POST') {

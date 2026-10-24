@@ -1,6 +1,757 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DriverDost Driver</title>
-<style>body{font-family:system-ui;margin:0;background:#111827;color:#f9fafb}main{max-width:720px;margin:auto;padding:20px}.card{background:#1f2937;border-radius:14px;padding:16px;margin:12px 0}button{padding:11px 16px;border:0;border-radius:9px;background:#22c55e;font-weight:700;cursor:pointer;margin:4px}</style></head>
-<body><main><h1>Driver App — DriverDost</h1><p>✓ Identity Verified · ✓ Licence Verified · ✓ Background Check Completed<br>Status: <b>Online</b> · Today's earnings dashboard updates on trip completion.</p>
-<div class="card"><h2>Incoming / Assigned Bookings</h2><div id="list">Loading…</div></div></main>
-<script>async function load(){const bs=await(await fetch('/api/bookings')).json();list.innerHTML=bs.length?bs.map(b=>`<div class="card"><b>#${b.id} ${b.serviceType}</b> — ${b.pickup} → ${b.destination||'—'}<br>${b.hours} hrs · You earn ₹${b.driverEarnings} · Status: ${b.status}<br><button onclick="act(${b.id},'arrived')">Arrived</button><button onclick="act(${b.id},'start')">Start Trip</button><button onclick="act(${b.id},'complete')">Complete Trip</button></div>`).join(''):'No bookings yet — create one in the Customer view.'}
-async function act(id,a){await fetch(`/api/bookings/${id}/${a}`,{method:'POST'});load()} load();</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DriverDost Chauffeur — Driver Partner App</title>
+  <meta name="description" content="Driver partner mobile cockpit for DriverDost chauffeurs. Manage trips, inspect vehicles, verify OTPs, and track earnings.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #080d1a;
+      --bg-card: rgba(15, 23, 42, 0.85);
+      --bg-card-hover: rgba(30, 41, 59, 0.95);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(34, 197, 94, 0.35);
+      --primary-emerald: #10b981;
+      --primary-amber: #f59e0b;
+      --accent-cyan: #38bdf8;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-heading: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(circle at 10% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 45%),
+        radial-gradient(circle at 90% 100%, rgba(245, 158, 11, 0.08) 0%, transparent 45%);
+      background-attachment: fixed;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+
+    /* MOBILE APP CONTAINER */
+    .app-viewport {
+      width: 100%;
+      max-width: 520px;
+      min-height: 100vh;
+      background: rgba(11, 17, 32, 0.95);
+      border-left: 1px solid var(--border-subtle);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* APP HEADER */
+    .app-header {
+      padding: 18px 20px;
+      background: rgba(8, 13, 26, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .brand-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .brand-title {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    /* DUTY TOGGLE */
+    .duty-switch-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      transition: all 0.2s ease;
+    }
+    .duty-switch-btn.offline {
+      border-color: rgba(244, 63, 94, 0.4);
+      background: rgba(244, 63, 94, 0.15);
+      color: #f43f5e;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      animation: pulse 1.8s infinite;
+    }
+    .pulse-dot.offline {
+      background: #f43f5e;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    /* SCROLL CONTENT */
+    .app-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    /* DRIVER PROFILE CARD */
+    .profile-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      backdrop-filter: blur(12px);
+    }
+    .profile-avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 16px;
+      object-fit: cover;
+      border: 2px solid var(--primary-emerald);
+    }
+    .profile-info {
+      flex: 1;
+    }
+    .driver-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #fff;
+    }
+    .driver-meta {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .trust-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    /* EARNINGS SUMMARY CARDS */
+    .earnings-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .earning-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .box-val {
+      font-family: var(--font-heading);
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .box-lbl {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-top: 2px;
+    }
+
+    /* SECTION TITLE */
+    .sec-title {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ACTIVE TRIP CARD */
+    .trip-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    .trip-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-amber), var(--primary-emerald));
+    }
+    .trip-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .trip-status-pill {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .trip-payout {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #34d399;
+    }
+    .route-display {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+      font-size: 0.88rem;
+    }
+    .route-point {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .route-point:last-child { margin-bottom: 0; }
+    .point-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-green { background: #10b981; }
+    .dot-amber { background: #f59e0b; }
+
+    /* ACTION BUTTONS */
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-action {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+    }
+    .btn-green:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-amber {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #070b14;
+    }
+    .btn-amber:hover { filter: brightness(1.1); }
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+    }
+    .btn-outline:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-sos {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #f43f5e;
+      font-weight: 700;
+    }
+    .btn-sos:hover { background: #f43f5e; color: #fff; }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 440px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .form-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--primary-emerald); }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      padding: 12px 20px;
+      background: rgba(8, 13, 26, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .nav-item.active { color: #34d399; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="app-viewport">
+    
+    <!-- TOP BAR -->
+    <header class="app-header">
+      <a href="/driver" class="header-brand">
+        <div class="brand-badge">🚗</div>
+        <div class="brand-title">DriverDost Chauffeur</div>
+      </a>
+      <button class="duty-switch-btn" id="duty_btn" onclick="toggleDuty()">
+        <span class="pulse-dot" id="duty_dot"></span>
+        <span id="duty_text">ON DUTY</span>
+      </button>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="app-content">
+      
+      <!-- DRIVER PROFILE -->
+      <section class="profile-card">
+        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80" alt="Chauffeur Avatar" class="profile-avatar" id="drv_avatar">
+        <div class="profile-info">
+          <div class="driver-name-row">
+            <span id="drv_name">Ramesh Kumar</span>
+            <span style="color:#34d399; font-size:1rem;" title="100% ID Verified">✓</span>
+          </div>
+          <div class="driver-meta">
+            ID: <strong id="drv_id">DM1001</strong> &bull; ★ <span id="drv_rating">4.9</span> (<span id="drv_trips">842</span> trips)
+          </div>
+          <div class="badge-bar">
+            <span class="trust-badge">🛡️ Aadhaar Verified</span>
+            <span class="trust-badge">🚗 Manual/Auto</span>
+            <span class="trust-badge">⚡ 96% Reliability</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- EARNINGS SUMMARY -->
+      <section class="earnings-row">
+        <div class="earning-box">
+          <div class="box-val" id="earn_today" style="color:#34d399;">₹1,788</div>
+          <div class="box-lbl">Today's Net</div>
+        </div>
+        <div class="earning-box">
+          <div class="box-val" id="earn_trips">4</div>
+          <div class="box-lbl">Trips Done</div>
+        </div>
+        <div class="earning-box">
+          <div class="box-val" id="earn_hrs">5.5h</div>
+          <div class="box-lbl">Hours Online</div>
+        </div>
+      </section>
+
+      <!-- ACTIVE DISPATCH / TRIP -->
+      <section>
+        <div class="sec-title" style="margin-bottom:12px;">
+          <span>Active Assigned Trip</span>
+          <span style="font-size:0.8rem; color:var(--text-muted); font-weight:400;" id="trip_sync_time">Live Sync</span>
+        </div>
+        <div id="active_trip_container">
+          <div style="text-align:center; padding:30px; color:var(--text-muted)">Loading active trip...</div>
+        </div>
+      </section>
+
+      <!-- ALL RECENT BOOKINGS -->
+      <section>
+        <div class="sec-title" style="margin-bottom:12px;">
+          <span>Recent Dispatch History</span>
+        </div>
+        <div id="booking_history_list" style="display:flex; flex-direction:column; gap:12px;">
+          <!-- Loaded via JS -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM APP NAVIGATION -->
+    <nav class="bottom-nav">
+      <a href="/driver" class="nav-item active">
+        <span style="font-size:1.2rem;">🧭</span>
+        <span>Trips</span>
+      </a>
+      <a href="/" class="nav-item">
+        <span style="font-size:1.2rem;">🚘</span>
+        <span>Customer App</span>
+      </a>
+      <a href="/admin" class="nav-item">
+        <span style="font-size:1.2rem;">📊</span>
+        <span>Admin Portal</span>
+      </a>
+      <a href="/analysis" class="nav-item">
+        <span style="font-size:1.2rem;">🛡️</span>
+        <span>Security Audit</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <!-- VEHICLE INSPECTION MODAL (Pre-Trip Trust Feature) -->
+  <div class="modal-backdrop" id="inspectModal">
+    <div class="modal-box">
+      <h3 style="font-family:var(--font-heading); color:#fff; font-size:1.25rem; margin-bottom:6px;">
+        🔍 Digital Vehicle Pre-Trip Inspection
+      </h3>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+        Record vehicle state before turning ignition to prevent damage disputes.
+      </p>
+
+      <label style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Odometer Reading (KM)</label>
+      <input type="number" id="insp_odo" class="form-input" placeholder="e.g. 24850" value="24850">
+
+      <label style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Fuel / Battery Level (%)</label>
+      <input type="number" id="insp_fuel" class="form-input" placeholder="e.g. 85" value="85" min="1" max="100">
+
+      <label style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Existing Scratches / Dents</label>
+      <input type="text" id="insp_scratch" class="form-input" placeholder="e.g. Minor scratch on rear left bumper" value="No major dents. Rear bumper light mark.">
+
+      <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px; margin-bottom:18px; font-size:0.82rem; color:#34d399;">
+        ✓ Pre-trip 4-angle vehicle photos logged & timestamped securely on server.
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn-action btn-outline" style="flex:1;" onclick="closeModal('inspectModal')">Cancel</button>
+        <button class="btn-action btn-green" style="flex:2;" onclick="submitInspection()">Save Inspection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- START TRIP OTP MODAL (Reliability & Security) -->
+  <div class="modal-backdrop" id="otpModal">
+    <div class="modal-box">
+      <h3 style="font-family:var(--font-heading); color:#fff; font-size:1.25rem; margin-bottom:6px;">
+        🔑 Verify Start Trip OTP
+      </h3>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+        Ask customer for their 4-digit security code before beginning the journey.
+      </p>
+
+      <input type="text" id="trip_otp_input" class="form-input" placeholder="Enter 4-Digit OTP" maxlength="4" style="text-align:center; font-size:1.6rem; letter-spacing:0.3em; font-weight:800; color:var(--primary-emerald)">
+      <div id="otp_msg" style="margin-bottom:12px; font-size:0.85rem;"></div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn-action btn-outline" style="flex:1;" onclick="closeModal('otpModal')">Cancel</button>
+        <button class="btn-action btn-green" style="flex:2;" onclick="submitOtp()">Verify & Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentBookingId = null;
+    let isOnline = true;
+    const DRIVER_ID = 1; // Simulated active driver: Ramesh Kumar (DM1001)
+
+    async function loadDriverState() {
+      try {
+        const res = await fetch('/api/bookings');
+        const bookings = await res.json();
+        
+        // Find active booking for this driver
+        const activeBooking = bookings.find(b => 
+          (b.driverId === DRIVER_ID || !b.driverId) && 
+          !['TRIP_COMPLETED', 'CANCELLED'].includes(b.status)
+        );
+
+        renderActiveTrip(activeBooking);
+        renderHistory(bookings);
+        document.getElementById('trip_sync_time').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderActiveTrip(b) {
+      const container = document.getElementById('active_trip_container');
+      if (!b) {
+        container.innerHTML = `
+          <div class="trip-card" style="text-align:center; padding:32px 20px;">
+            <div style="font-size:2rem; margin-bottom:8px;">🟢</div>
+            <div style="font-weight:700; font-size:1.1rem; color:#fff; margin-bottom:4px;">You Are On Duty</div>
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+              Waiting for new chauffeur assignments in Bengaluru Central corridor...
+            </div>
+            <button class="btn-action btn-outline" onclick="loadDriverState()">Refresh Dispatch Feed</button>
+          </div>
+        `;
+        return;
+      }
+
+      currentBookingId = b.id;
+      const earnings = b.driverEarnings || Math.round(b.total * 0.80);
+
+      container.innerHTML = `
+        <div class="trip-card">
+          <div class="trip-top">
+            <div>
+              <span class="trip-status-pill">${b.status.replace(/_/g, ' ')}</span>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Booking #${b.id} &bull; ${b.serviceType || 'Hourly Chauffeur'}</div>
+            </div>
+            <div class="trip-payout">₹${earnings}</div>
+          </div>
+
+          <div style="font-size:0.88rem; color:#fff; margin-bottom:10px; display:flex; justify-content:space-between;">
+            <span>Customer: <strong>${b.customerName || 'Customer'}</strong></span>
+            <span style="color:var(--primary-amber)">⚙️ ${b.transmission || 'Manual'}</span>
+          </div>
+
+          <div class="route-display">
+            <div class="route-point">
+              <span class="point-dot dot-green"></span>
+              <div><strong style="color:#fff">Pickup:</strong> ${b.pickup}</div>
+            </div>
+            <div class="route-point">
+              <span class="point-dot dot-amber"></span>
+              <div><strong style="color:#fff">Destination:</strong> ${b.destination || 'Kempegowda International Airport (BLR)'}</div>
+            </div>
+          </div>
+
+          <div style="font-size:0.8rem; color:var(--accent-cyan); margin-bottom:16px; background:rgba(56,189,248,0.08); padding:8px 12px; border-radius:8px;">
+            ⏱️ Duration: <strong>${b.hours} Hours</strong> &bull; Start OTP for testing: <strong style="color:#fff;">${b.otp || '4821'}</strong>
+          </div>
+
+          <!-- DYNAMIC ACTION BUTTONS ACCORDING TO STATE -->
+          <div class="action-group">
+            ${b.status === 'DRIVER_ASSIGNED' ? `
+              <button class="btn-action btn-amber" onclick="markArrived(${b.id})">📍 Mark Arrived at Customer Location</button>
+            ` : ''}
+
+            ${b.status === 'DRIVER_ARRIVED' ? `
+              <button class="btn-action btn-outline" onclick="openInspectionModal(${b.id})">🔍 Digital Vehicle Pre-Inspection</button>
+              <button class="btn-action btn-green" onclick="openOtpModal(${b.id})">🔑 Enter Customer OTP &amp; Start Trip</button>
+            ` : ''}
+
+            ${b.status === 'INSPECTION_COMPLETED' ? `
+              <button class="btn-action btn-green" onclick="openOtpModal(${b.id})">🔑 Enter Customer OTP &amp; Start Trip</button>
+            ` : ''}
+
+            ${b.status === 'TRIP_STARTED' ? `
+              <button class="btn-action btn-green" onclick="completeTrip(${b.id})">🏁 Complete Trip &amp; Settle Fare</button>
+            ` : ''}
+
+            <button class="btn-action btn-sos" onclick="triggerSos(${b.id})">🚨 Trigger Emergency SOS Alert</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderHistory(bookings) {
+      const list = document.getElementById('booking_history_list');
+      const finished = bookings.filter(b => ['TRIP_COMPLETED', 'CANCELLED'].includes(b.status));
+      if (!finished.length) {
+        list.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem; padding:10px 0;">No completed trips yet.</div>`;
+        return;
+      }
+      list.innerHTML = finished.map(b => `
+        <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; color:#fff; font-size:0.9rem;">#${b.id} &bull; ${b.pickup.slice(0, 24)}...</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${b.hours} hrs &bull; ${b.serviceType || 'Hourly'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:#34d399; font-weight:700; font-size:0.95rem;">₹${b.driverEarnings || Math.round(b.total*0.8)}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${b.status}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleDuty() {
+      isOnline = !isOnline;
+      const btn = document.getElementById('duty_btn');
+      const dot = document.getElementById('duty_dot');
+      const txt = document.getElementById('duty_text');
+
+      if (isOnline) {
+        btn.classList.remove('offline');
+        dot.classList.remove('offline');
+        txt.textContent = 'ON DUTY';
+      } else {
+        btn.classList.add('offline');
+        dot.classList.add('offline');
+        txt.textContent = 'OFFLINE';
+      }
+
+      await fetch(`/api/drivers/${DRIVER_ID}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ online: isOnline })
+      });
+    }
+
+    async function markArrived(id) {
+      await fetch(`/api/bookings/${id}/arrived`, { method: 'POST' });
+      loadDriverState();
+    }
+
+    function openInspectionModal(id) {
+      currentBookingId = id;
+      document.getElementById('inspectModal').classList.add('open');
+    }
+
+    async function submitInspection() {
+      const odo = document.getElementById('insp_odo').value;
+      const fuel = document.getElementById('insp_fuel').value;
+      const scratches = document.getElementById('insp_scratch').value;
+
+      await fetch(`/api/bookings/${currentBookingId}/inspect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ odometerKm: odo, fuelLevelPercent: fuel, existingScratches: scratches })
+      });
+      closeModal('inspectModal');
+      loadDriverState();
+    }
+
+    function openOtpModal(id) {
+      currentBookingId = id;
+      document.getElementById('trip_otp_input').value = '';
+      document.getElementById('otp_msg').innerHTML = '';
+      document.getElementById('otpModal').classList.add('open');
+    }
+
+    async function submitOtp() {
+      const otp = document.getElementById('trip_otp_input').value;
+      const res = await fetch(`/api/bookings/${currentBookingId}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        closeModal('otpModal');
+        loadDriverState();
+      } else {
+        document.getElementById('otp_msg').innerHTML = `<span style="color:#ef4444;">${data.error}</span>`;
+      }
+    }
+
+    async function completeTrip(id) {
+      if (confirm('Confirm trip completed and vehicle handed back safely to customer?')) {
+        await fetch(`/api/bookings/${id}/complete`, { method: 'POST' });
+        loadDriverState();
+      }
+    }
+
+    async function triggerSos(id) {
+      if (confirm('🚨 ACTIVATE EMERGENCY SOS? This alerts DriverDost operations center and triggers emergency assistance.')) {
+        await fetch(`/api/bookings/${id}/sos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ triggerBy: 'Driver (Ramesh Kumar)', reason: 'Driver Panic SOS triggered from cockpit' })
+        });
+        alert('🚨 Emergency protocol activated. Operations center has been notified.');
+        loadDriverState();
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // Polling every 5 seconds for live dispatch
+    loadDriverState();
+    setInterval(loadDriverState, 5000);
+  </script>
+</body>
+</html>
