@@ -1,42 +1,175 @@
 // Admin auth — login with username OR phone number + password.
-// Passwords hashed with Node's built-in scrypt + per-user salt (use bcrypt/argon2 in production).
+// Hardened with asynchronous scrypt KDF, timing-safe equality, session TTL, and brute-force rate limiting.
 const crypto = require('crypto');
+const { promisify } = require('util');
 const store = require('./store');
 
-const hash = (password, salt) => crypto.scryptSync(password, salt, 64).toString('hex');
-function createAdmin({ name, username, phone, password }) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const admin = { id: store.nextId.admin++, name: name || username, username: String(username).trim().toLowerCase(),
-    phone: normalizePhone(phone), salt, passwordHash: hash(password, salt) };
-  store.admins.push(admin); return admin;
+const scryptAsync = promisify(crypto.scrypt);
+
+// Session configuration
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 Hours
+
+// Rate limiting state: identifier/ip -> { count, lockedUntil, firstAttempt }
+const loginAttempts = new Map();
+
+/**
+ * Asynchronous, non-blocking password hashing with scrypt
+ * Produces 64-byte key output with user salt.
+ */
+async function hash(password, salt) {
+  const buf = await scryptAsync(String(password), String(salt), 64);
+  return buf.toString('hex');
 }
+
+/**
+ * Check rate limit for an identifier
+ */
+function checkRateLimit(identifier) {
+  const key = String(identifier || '').trim().toLowerCase();
+  const record = loginAttempts.get(key);
+  if (!record) return { allowed: true };
+
+  const now = Date.now();
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const waitSec = Math.ceil((record.lockedUntil - now) / 1000);
+    return { allowed: false, message: `Too many failed attempts. Account locked. Try again in ${waitSec}s.` };
+  }
+
+  if (record.lockedUntil && now >= record.lockedUntil) {
+    loginAttempts.delete(key);
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+}
+
+function recordFailedAttempt(identifier) {
+  const key = String(identifier || '').trim().toLowerCase();
+  const now = Date.now();
+  const record = loginAttempts.get(key) || { count: 0, firstAttempt: now };
+  record.count++;
+  if (record.count >= 5) {
+    record.lockedUntil = now + 15 * 60 * 1000; // 15-minute lock
+  }
+  loginAttempts.set(key, record);
+}
+
+function clearFailedAttempts(identifier) {
+  const key = String(identifier || '').trim().toLowerCase();
+  loginAttempts.delete(key);
+}
+
+/**
+ * Normalize Indian mobile numbers
+ */
 function normalizePhone(p) { // "+91 98765 43210" -> "9876543210"
   let d = String(p || '').replace(/\D/g, '');
   if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
   if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
   return d;
 }
+
+/**
+ * Find admin by either username or normalized phone
+ */
 function findAdmin(identifier) {
   const id = String(identifier || '').trim().toLowerCase();
   const phone = normalizePhone(identifier);
-  return store.admins.find(a => a.username === id || a.phone === phone);
+  return store.admins.find(a => a.username === id || (phone.length === 10 && a.phone === phone));
 }
-function verify(admin, password) {
-  if (!admin) return false;
-  const attempt = Buffer.from(hash(password, admin.salt));
-  const real = Buffer.from(admin.passwordHash);
-  return attempt.length === real.length && crypto.timingSafeEqual(attempt, real);
+
+/**
+ * Constant-time password verification preventing timing side-channel attacks
+ */
+async function verify(admin, password) {
+  if (!admin || !admin.salt || !admin.passwordHash) return false;
+  try {
+    const attemptHex = await hash(password, admin.salt);
+    const attempt = Buffer.from(attemptHex, 'hex');
+    const real = Buffer.from(admin.passwordHash, 'hex');
+    return attempt.length === real.length && crypto.timingSafeEqual(attempt, real);
+  } catch (err) {
+    return false;
+  }
 }
-function login(identifier, password) {
+
+/**
+ * Create a new admin with per-user salt and asynchronous scrypt hash
+ */
+async function createAdmin({ name, username, phone, password }) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const passwordHash = await hash(password, salt);
+  const admin = {
+    id: store.nextId.admin++,
+    name: name || username,
+    username: String(username).trim().toLowerCase(),
+    phone: normalizePhone(phone),
+    salt,
+    passwordHash,
+    createdAt: new Date().toISOString()
+  };
+  store.admins.push(admin);
+  return admin;
+}
+
+/**
+ * Authenticate admin with rate-limiting, timing-safe comparison, and TTL session
+ */
+async function login(identifier, password) {
+  const rateStatus = checkRateLimit(identifier);
+  if (!rateStatus.allowed) {
+    return { error: rateStatus.message, rateLimited: true };
+  }
+
   const admin = findAdmin(identifier);
-  if (!verify(admin, password)) return null;
+  const isValid = await verify(admin, password);
+  if (!isValid) {
+    recordFailedAttempt(identifier);
+    return null;
+  }
+
+  clearFailedAttempts(identifier);
   const token = crypto.randomBytes(32).toString('hex');
-  store.sessions.set(token, admin.id); return { token, admin: publicAdmin(admin) };
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  store.sessions.set(token, { adminId: admin.id, expiresAt, username: admin.username });
+  return { token, expiresAt, admin: publicAdmin(admin) };
 }
+
+/**
+ * Extract admin profile from Bearer authorization header with TTL validation
+ */
 function adminFromToken(req) {
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  const id = store.sessions.get(token);
-  return store.admins.find(a => a.id === id) || null;
+  const rawHeader = req.headers.authorization || '';
+  const token = rawHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return null;
+
+  const session = store.sessions.get(token);
+  if (!session) return null;
+
+  // Support both legacy numeric ID and session object
+  const adminId = typeof session === 'object' ? session.adminId : session;
+  const expiresAt = typeof session === 'object' ? session.expiresAt : Infinity;
+
+  if (Date.now() > expiresAt) {
+    store.sessions.delete(token); // TTL expired
+    return null;
+  }
+
+  return store.admins.find(a => a.id === adminId) || null;
 }
-function publicAdmin(a) { return { id: a.id, name: a.name, username: a.username, phone: a.phone }; }
-module.exports = { createAdmin, findAdmin, login, adminFromToken, publicAdmin, normalizePhone, hash };
+
+function publicAdmin(a) {
+  return { id: a.id, name: a.name, username: a.username, phone: a.phone };
+}
+
+module.exports = {
+  createAdmin,
+  findAdmin,
+  login,
+  adminFromToken,
+  publicAdmin,
+  normalizePhone,
+  hash,
+  verify,
+  checkRateLimit
+};

@@ -1,32 +1,1145 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DriverDost — Your Car. Your Driver. Your Convenience.</title>
-<style>body{font-family:system-ui;margin:0;background:#0f172a;color:#f8fafc}header,main{max-width:960px;margin:auto;padding:20px}.card{background:#1e293b;border-radius:14px;padding:18px;margin:14px 0}input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:9px;border:0}button{background:#f59e0b;font-weight:700;cursor:pointer}.driver{display:flex;gap:12px;align-items:center}.badge{background:#14532d;padding:3px 8px;border-radius:99px;font-size:12px}</style></head>
-<body><header><h1>🚗 DriverDost</h1><p>Your Car. Your Driver. Your Convenience.<br>Book verified drivers in Bengaluru for hourly trips, airport, weddings & full days — from ₹129/hr, no hidden charges.</p>
-<nav><a href="/" style="color:#fbbf24">Customer</a> · <a href="/driver" style="color:#fbbf24">Driver App</a> · <a href="/admin" style="color:#fbbf24">Admin</a></nav></header>
-<main>
-<section class="card"><h2>Book a Driver</h2>
-<input id="name" placeholder="Your name"><input id="pickup" placeholder="Pickup — e.g. Indiranagar, Bengaluru">
-<input id="dest" placeholder="Destination (optional)">
-<select id="service"><option>Hourly</option><option>Airport Transfer</option><option>Wedding</option><option>Full Day</option><option>One Way</option><option>Round Trip</option><option>Scheduled</option><option>Family Booking</option></select>
-<select id="trans"><option>Manual</option><option>Automatic</option></select>
-<label>Hours <input id="hours" type="number" value="3" min="1" max="12"></label>
-<p id="quote">3 hrs @ ₹149/hr = ₹447 (Driver ₹358 + Platform ₹89)</p>
-<button onclick="book()">Book Driver</button><p id="result"></p></section>
-<section class="card"><h2>Verified Drivers Near You — tap a driver for full details</h2><div id="drivers">Loading…</div><div id="driverDetail"></div></section>
-<section class="card"><h2>Become a Driver — ID verification required</h2><p>New drivers are <b>not</b> added instantly. You apply with a government ID + licence, an admin verifies your ID, and only then do you appear here for customers.</p>
-<input id="d_name" placeholder="Full name"><input id="d_phone" placeholder="Phone number">
-<select id="d_idtype"><option>Aadhaar</option><option>Driving Licence</option><option>PAN</option></select>
-<input id="d_idnum" placeholder="Government ID number"><input id="d_lic" placeholder="Driving licence number">
-<input id="d_exp" type="number" placeholder="Years of experience" value="5">
-<button onclick="applyDriver()">Apply — Submit ID for Verification</button><p id="applyResult"></p></section>
-<section class="card"><h2>How It Works</h2><ol><li>Choose your trip</li><li>Get matched with a verified driver (ID, licence & background checked)</li><li>Enjoy the journey in your own car — SOS, live tracking & pre-trip vehicle inspection included</li></ol></section>
-</main>
-<script>
-const rate=h=>h>=8?129:h>=4?139:149;const q=()=>{const h=+hours.value||1,r=rate(h),t=h*r,d=Math.round(t*0.8);quote.textContent=`${h} hrs @ ₹${r}/hr = ₹${t} (Driver ₹${d} + Platform ₹${t-d})`};hours.oninput=q; q();
-let DRIVERS=[];
-async function load(){DRIVERS=await(await fetch('/api/drivers')).json();drivers.innerHTML=DRIVERS.map((x,i)=>`<div class="driver" onclick="showDriver(${i})" style="cursor:pointer"><b>${x.photo}</b><div><b>${x.name}</b> · ${x.profileId} · ★${x.rating} · ${x.trips} trips · ${x.experienceYears} yrs exp · Reliability ${x.reliabilityScore}/100 · ${x.distanceKm} km away<br>${x.languages.join(', ')} · ${x.transmissions.join(' + ')}<br>${x.badges.map(b=>`<span class="badge">✓ ${b}</span>`).join(' ')} <span class="badge">✓ ID Verified (${x.govtId.type} ${x.govtId.masked})</span></div></div><hr>`).join('')}
-function showDriver(i){const x=DRIVERS[i];driverDetail.innerHTML=`<div class="card" style="background:#0f172a"><h3>${x.name} — Full Driver Details</h3><p>Driver ID: ${x.profileId} · Rating: ★${x.rating} · Trips completed: ${x.trips}<br>Experience: ${x.experienceYears} years · Languages: ${x.languages.join(', ')}<br>Drives: ${x.transmissions.join(' + ')} · Reliability score: ${x.reliabilityScore}/100 · Distance: ${x.distanceKm} km<br>Government ID: ${x.govtId.type} ${x.govtId.masked} — ✓ Verified · Licence: ${x.licenceMasked} — ✓ Verified<br><i>Full ID numbers are never shown to customers, only verified status and a masked reference.</i></p></div>`}
-async function applyDriver(){const r=await fetch('/api/drivers/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:d_name.value,phone:d_phone.value,govtIdType:d_idtype.value,govtIdNumber:d_idnum.value,licenceNumber:d_lic.value,experienceYears:+d_exp.value})});const d=await r.json();applyResult.textContent=r.ok?`✅ Application #${d.id} received — status: ${d.status}. An admin will verify your ID before you are added as a driver.`:'Error: '+d.error}
-async function book(){const r=await fetch('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:name.value,pickup:pickup.value,destination:dest.value,serviceType:service.value,transmission:trans.value,hours:+hours.value})});const b=await r.json();if(!r.ok){result.textContent='Error: '+b.error;return}const drv=DRIVERS.find(d=>d.id===b.driverId);result.innerHTML=`✅ Booking #${b.id} confirmed — ${b.status}, Total ₹${b.total}.<br><b>Your driver:</b> ${drv?`${drv.name} (${drv.profileId}) · ★${drv.rating} · ${drv.experienceYears} yrs · ${drv.govtId.type} ${drv.govtId.masked} ✓ ID Verified`:('Driver ID '+b.driverId)} — best match. See it in Driver & Admin views.`}
-load();
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DriverDost — Professional Chauffeurs for Your Car | Bengaluru</title>
+  <meta name="description" content="Book 100% ID-verified professional drivers for your personal car in Bengaluru. Hourly trips, airport, weddings, and outstation from ₹129/hr.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070b14;
+      --bg-card: rgba(17, 24, 39, 0.85);
+      --bg-card-hover: rgba(30, 41, 59, 0.95);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(251, 191, 36, 0.4);
+      --primary-amber: #f59e0b;
+      --primary-gold: #fbbf24;
+      --accent-emerald: #10b981;
+      --accent-cyan: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-heading: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(circle at 10% 0%, rgba(245, 158, 11, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 90% 100%, rgba(16, 185, 129, 0.06) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    /* FULL WIDTH NAVIGATION */
+    header {
+      width: 100%;
+      background: rgba(7, 11, 20, 0.9);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-inner {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary-gold), #d97706);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+    }
+    .logo-text {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .logo-tagline {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .city-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent-emerald);
+    }
+    .pulsing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--primary-gold);
+    }
+    .portal-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .portal-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* HERO BANNER */
+    .hero-banner {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 40px 32px 24px;
+    }
+    .hero-headline {
+      font-family: var(--font-heading);
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 800px;
+      margin-bottom: 24px;
+    }
+    .trust-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .trust-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* MAIN APP LAYOUT (FULL SCREEN 2-COLUMN) */
+    .main-layout {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 16px 32px 64px;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    /* BOOKING CONSOLE (LEFT PANEL) */
+    .booking-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+      position: sticky;
+      top: 100px;
+    }
+    .card-heading {
+      font-family: var(--font-heading);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      background: rgba(10, 15, 26, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 13px 16px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: var(--primary-gold);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+      background: rgba(10, 15, 26, 0.9);
+    }
+    .quick-locations {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .quick-loc-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quick-loc-btn:hover {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--primary-gold);
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    /* HOURS SLIDER & LIVE CALCULATOR */
+    .slider-container {
+      background: rgba(10, 15, 26, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 6px;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .slider-val-badge {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--primary-gold);
+    }
+    input[type=range] {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 4px;
+      outline: none;
+      accent-color: var(--primary-gold);
+      cursor: pointer;
+    }
+    .fare-box {
+      margin-top: 20px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(16, 185, 129, 0.08) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .fare-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .fare-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      padding-top: 10px;
+      margin-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .book-btn {
+      width: 100%;
+      margin-top: 22px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #070b14;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.1rem;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .book-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.45);
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    }
+
+    /* RIGHT COLUMN: DRIVERS DECK */
+    .drivers-section {
+      width: 100%;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .section-sub {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .filter-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--primary-gold);
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+
+    /* DRIVER PROFILE CARDS (GENEROUS PADDING & REAL PHOTOS) */
+    .drivers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 24px;
+    }
+    .driver-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 26px; /* Generous padding as requested */
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    .driver-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-glow);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+      background: var(--bg-card-hover);
+    }
+    .driver-header {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .avatar-wrap {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      flex-shrink: 0;
+    }
+    .driver-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      object-fit: cover;
+      border: 2px solid rgba(251, 191, 36, 0.35);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      background: #1e293b;
+    }
+    .status-ring {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      background: #064e3b;
+      border: 2px solid var(--bg-dark);
+      border-radius: 9999px;
+      padding: 3px 8px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .driver-meta {
+      flex: 1;
+      min-width: 0;
+    }
+    .driver-name {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .verified-icon {
+      color: #38bdf8;
+      font-size: 1.1rem;
+    }
+    .driver-id-pill {
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .driver-location {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* DRIVER STATS ROW */
+    .driver-stats-box {
+      background: rgba(10, 15, 26, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .stat-lbl {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* BADGES & TAGS */
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+    .pill-tag {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.75rem;
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .pill-verified {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    /* CARD ACTION BUTTONS */
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .btn-select {
+      flex: 1;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: var(--primary-gold);
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 11px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-select:hover {
+      background: var(--primary-gold);
+      color: #070b14;
+    }
+    .btn-view {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: #cbd5e1;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 11px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-view:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    /* FULL DRIVER DOSSIER MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-dossier {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 36px;
+      position: relative;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+    }
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #cbd5e1;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-close:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+    /* ONBOARDING SECTION */
+    .onboarding-banner {
+      width: 100%;
+      max-width: 1600px;
+      margin: 32px auto;
+      padding: 0 32px;
+    }
+    .onboarding-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 36px;
+    }
+
+    /* RESPONSIVENESS */
+    @media (max-width: 1100px) {
+      .main-layout { grid-template-columns: 1fr; }
+      .booking-card { position: static; }
+      .hero-headline { font-size: 2.2rem; }
+    }
+    @media (max-width: 640px) {
+      .nav-inner, .hero-banner, .main-layout, .onboarding-banner { padding-left: 16px; padding-right: 16px; }
+      .drivers-grid { grid-template-columns: 1fr; }
+      .hero-headline { font-size: 1.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FULL-WIDTH NAVIGATION -->
+  <header>
+    <div class="nav-inner">
+      <a href="/" class="logo-area">
+        <div class="logo-badge">🚗</div>
+        <div>
+          <div class="logo-text">DriverDost</div>
+          <div class="logo-tagline">Your Car &bull; Our Verified Chauffeur</div>
+        </div>
+      </a>
+
+      <div class="city-pill">
+        <span class="pulsing-dot"></span>
+        <span>Bengaluru Live &bull; 6 Drivers Ready</span>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#book" class="active">Book a Chauffeur</a>
+        <a href="#drivers">Verified Drivers</a>
+        <a href="#apply">Partner With Us</a>
+        <a href="/analysis" target="_blank" style="color:var(--accent-cyan)">Code Analysis</a>
+        <a href="/admin" class="portal-btn">🔒 Admin Portal</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero-banner">
+    <h1 class="hero-headline">Professional, ID-Verified Chauffeurs<br>For Your Personal Car.</h1>
+    <p class="hero-sub">
+      Experience effortless city commute, airport runs, wedding convoys, and highway journeys in the comfort of your own car. Transparent hourly pricing from ₹129/hr with zero surge fees.
+    </p>
+
+    <div class="trust-pills">
+      <div class="trust-pill">🛡️ 100% Aadhaar &amp; Driving Licence Verified</div>
+      <div class="trust-pill">👮 Police Background Check Passed</div>
+      <div class="trust-pill">🔍 Pre-Trip 12-Point Vehicle Inspection</div>
+      <div class="trust-pill">⚡ Guaranteed Driver Arrival in 30 Mins</div>
+    </div>
+  </section>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="main-layout">
+
+    <!-- LEFT: INTERACTIVE BOOKING CONSOLE -->
+    <aside class="booking-card" id="book">
+      <div class="card-heading">
+        <span>📍</span>
+        <span>Instant Chauffeur Booking</span>
+      </div>
+      <div class="card-subtitle">Transparent hourly calculation. No hidden platform charges.</div>
+
+      <div class="form-group">
+        <label class="form-label" for="customer_name">Your Name</label>
+        <input type="text" id="customer_name" class="form-input" placeholder="e.g. Vikram Malhotra" value="Vikram Malhotra">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="pickup_loc">Pickup Location in Bengaluru</label>
+        <input type="text" id="pickup_loc" class="form-input" placeholder="e.g. 100 Feet Rd, Indiranagar" value="100 Feet Rd, Indiranagar">
+        <div class="quick-locations">
+          <button type="button" class="quick-loc-btn" onclick="setPickup('Indiranagar, Bengaluru')">Indiranagar</button>
+          <button type="button" class="quick-loc-btn" onclick="setPickup('Koramangala 4th Block')">Koramangala</button>
+          <button type="button" class="quick-loc-btn" onclick="setPickup('HSR Layout Sector 1')">HSR Layout</button>
+          <button type="button" class="quick-loc-btn" onclick="setPickup('Whitefield ITPL')">Whitefield</button>
+          <button type="button" class="quick-loc-btn" onclick="setPickup('Kempegowda Intl Airport')">Airport</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="dest_loc">Destination (Optional for Hourly)</label>
+        <input type="text" id="dest_loc" class="form-input" placeholder="e.g. Kempegowda International Airport">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;" class="form-group">
+        <div>
+          <label class="form-label" for="service_type">Trip Service</label>
+          <select id="service_type" class="form-select">
+            <option value="Hourly">Hourly Chauffeur</option>
+            <option value="Airport Transfer">Airport Transfer</option>
+            <option value="Full Day">Full Day (8+ Hrs)</option>
+            <option value="Outstation">Outstation Trip</option>
+            <option value="Wedding Chauffeur">Wedding Fleet</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" for="trans_type">Car Transmission</label>
+          <select id="trans_type" class="form-select">
+            <option value="Manual">Manual</option>
+            <option value="Automatic">Automatic</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- DYNAMIC HOURS SLIDER -->
+      <div class="form-group">
+        <div class="slider-container">
+          <div class="slider-header">
+            <span style="font-size:0.85rem; font-weight:600; color:#cbd5e1;">Booking Duration</span>
+            <span class="slider-val-badge" id="hours_val">4 Hours</span>
+          </div>
+          <input type="range" id="hours_slider" min="1" max="14" value="4" oninput="calculateFare()">
+        </div>
+      </div>
+
+      <!-- TRANSPARENT FARE BREAKDOWN -->
+      <div class="fare-box">
+        <div class="fare-row">
+          <span>Base Hourly Rate</span>
+          <span id="rate_per_hr">₹139 / hr</span>
+        </div>
+        <div class="fare-row">
+          <span>Driver Payout (80%)</span>
+          <span id="driver_earning_val">₹445</span>
+        </div>
+        <div class="fare-row">
+          <span>Platform &amp; Insurance Fee (20%)</span>
+          <span id="platform_fee_val">₹111</span>
+        </div>
+        <div class="fare-total-row">
+          <span>Total Payable</span>
+          <span id="total_fare_val" style="color:var(--primary-gold)">₹556</span>
+        </div>
+      </div>
+
+      <button type="button" class="book-btn" onclick="confirmBooking()">
+        <span>🚗</span>
+        <span>Confirm Chauffeur Booking</span>
+      </button>
+
+      <div id="booking_result" style="margin-top:14px; font-size:0.88rem;"></div>
+    </aside>
+
+    <!-- RIGHT: VERIFIED DRIVERS DIRECTORY -->
+    <section class="drivers-section" id="drivers">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Verified Professional Chauffeurs</h2>
+          <div class="section-sub">Real-time Bengaluru fleet. Click any profile to inspect verified credentials.</div>
+        </div>
+
+        <div class="filter-tags">
+          <button class="filter-btn active" onclick="filterDrivers('all')">All Drivers</button>
+          <button class="filter-btn" onclick="filterDrivers('automatic')">Automatic</button>
+          <button class="filter-btn" onclick="filterDrivers('manual')">Manual</button>
+          <button class="filter-btn" onclick="filterDrivers('top')">Top Rated (★4.8+)</button>
+        </div>
+      </div>
+
+      <!-- DRIVERS GRID -->
+      <div class="drivers-grid" id="drivers_container">
+        <!-- Rendered dynamically via JavaScript -->
+        <div style="padding:40px; text-align:center; color:var(--text-muted);">
+          Fetching verified driver profiles...
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ONBOARDING APPLICATION SECTION -->
+  <section class="onboarding-banner" id="apply">
+    <div class="onboarding-card">
+      <div style="max-width:800px;">
+        <h2 style="font-family:var(--font-heading); font-size:1.8rem; font-weight:800; color:#fff; margin-bottom:8px;">
+          Drive With DriverDost &bull; Verified Partner Program
+        </h2>
+        <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:20px;">
+          Earn up to ₹45,000/month driving customer cars. No car ownership required. Every driver must undergo mandatory Aadhaar, Driving Licence, and background verification before activation.
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:18px;">
+          <input type="text" id="app_name" class="form-input" placeholder="Full Legal Name">
+          <input type="tel" id="app_phone" class="form-input" placeholder="Mobile Number (10-digit)">
+          <select id="app_idtype" class="form-select">
+            <option value="Aadhaar">Aadhaar Card</option>
+            <option value="Driving Licence">Driving Licence</option>
+            <option value="PAN">PAN Card</option>
+          </select>
+          <input type="text" id="app_idnum" class="form-input" placeholder="Govt ID Number (e.g. Aadhaar)">
+          <input type="text" id="app_lic" class="form-input" placeholder="Driving Licence Number">
+          <input type="number" id="app_exp" class="form-input" placeholder="Years of Experience" value="6">
+        </div>
+
+        <button type="button" class="portal-btn" style="background:var(--primary-amber); color:#070b14; font-weight:700; padding:12px 24px;" onclick="submitDriverApplication()">
+          Submit Application for Verification
+        </button>
+        <div id="app_status" style="margin-top:12px; font-size:0.9rem;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FULL DRIVER PROFILE MODAL -->
+  <div class="modal-overlay" id="driverModal" onclick="closeModal(event)">
+    <div class="modal-dossier" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modal_content"></div>
+    </div>
+  </div>
+
+  <script>
+    let ALL_DRIVERS = [];
+    let selectedFilter = 'all';
+
+    // Fare Calculator Logic
+    function getRatePerHr(hours) {
+      if (hours >= 8) return 129;
+      if (hours >= 4) return 139;
+      return 149;
+    }
+
+    function calculateFare() {
+      const h = Number(document.getElementById('hours_slider').value) || 3;
+      document.getElementById('hours_val').textContent = h + (h === 1 ? ' Hour' : ' Hours');
+      
+      const rate = getRatePerHr(h);
+      const total = h * rate;
+      const driverEarnings = Math.round(total * 0.80);
+      const platformFee = total - driverEarnings;
+
+      document.getElementById('rate_per_hr').textContent = `₹${rate} / hr`;
+      document.getElementById('driver_earning_val').textContent = `₹${driverEarnings}`;
+      document.getElementById('platform_fee_val').textContent = `₹${platformFee}`;
+      document.getElementById('total_fare_val').textContent = `₹${total}`;
+    }
+
+    function setPickup(location) {
+      document.getElementById('pickup_loc').value = location;
+    }
+
+    // Load Drivers from API
+    async function fetchDrivers() {
+      try {
+        const res = await fetch('/api/drivers');
+        ALL_DRIVERS = await res.json();
+        renderDrivers();
+      } catch (err) {
+        document.getElementById('drivers_container').innerHTML = 
+          `<div style="color:#ef4444; padding:20px;">Failed to load drivers. Ensure the server is running.</div>`;
+      }
+    }
+
+    function filterDrivers(filter) {
+      selectedFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      renderDrivers();
+    }
+
+    function renderDrivers() {
+      const container = document.getElementById('drivers_container');
+      let filtered = [...ALL_DRIVERS];
+
+      if (selectedFilter === 'automatic') {
+        filtered = filtered.filter(d => d.transmissions.includes('Automatic'));
+      } else if (selectedFilter === 'manual') {
+        filtered = filtered.filter(d => d.transmissions.includes('Manual'));
+      } else if (selectedFilter === 'top') {
+        filtered = filtered.filter(d => d.rating >= 4.8);
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted)">No drivers match this filter.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(d => `
+        <div class="driver-card">
+          <div>
+            <div class="driver-header">
+              <div class="avatar-wrap">
+                <img src="${d.photo}" alt="${d.name}" class="driver-avatar" onerror="this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80'">
+                <div class="status-ring">
+                  <span style="width:6px; height:6px; border-radius:50%; background:#34d399;"></span>
+                  <span>ONLINE</span>
+                </div>
+              </div>
+              <div class="driver-meta">
+                <div class="driver-name">
+                  <span>${d.name}</span>
+                  <span class="verified-icon" title="Identity & Police Verified">✓</span>
+                </div>
+                <div class="driver-id-pill">${d.profileId}</div>
+                <div class="driver-location">📍 ${d.city || 'Bengaluru'} &bull; <strong>${d.distanceKm} km away</strong></div>
+              </div>
+            </div>
+
+            <!-- DRIVER STATS -->
+            <div class="driver-stats-box">
+              <div>
+                <div class="stat-val" style="color:var(--primary-gold)">★ ${d.rating}</div>
+                <div class="stat-lbl">Rating</div>
+              </div>
+              <div>
+                <div class="stat-val">${d.trips}</div>
+                <div class="stat-lbl">Trips</div>
+              </div>
+              <div>
+                <div class="stat-val">${d.experienceYears}y</div>
+                <div class="stat-lbl">Exp</div>
+              </div>
+              <div>
+                <div class="stat-val" style="color:var(--accent-emerald)">${d.reliabilityScore}%</div>
+                <div class="stat-lbl">Reliable</div>
+              </div>
+            </div>
+
+            <!-- TAG CLOUD -->
+            <div class="tag-cloud">
+              <span class="pill-tag pill-verified">🛡️ ${d.govtId.type} Verified</span>
+              <span class="pill-tag">⚙️ ${d.transmissions.join(' &bull; ')}</span>
+              <span class="pill-tag">🗣️ ${d.languages.slice(0, 2).join(', ')}</span>
+              ${d.specialities ? `<span class="pill-tag" style="border-color:rgba(56,189,248,0.3); color:#38bdf8;">✨ ${d.specialities[0]}</span>` : ''}
+            </div>
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="card-actions">
+            <button class="btn-select" onclick="selectDriverForBooking(${d.id}, '${d.name}')">Select Chauffeur</button>
+            <button class="btn-view" onclick="openDriverModal(${d.id})">Credentials</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectDriverForBooking(driverId, name) {
+      document.getElementById('book').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('booking_result').innerHTML = `
+        <div style="background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.4); padding:12px; border-radius:8px; color:var(--primary-gold);">
+          🎯 Selected Preferred Chauffeur: <strong>${name} (ID: ${driverId})</strong>. Ready to confirm booking below!
+        </div>
+      `;
+    }
+
+    // Modal Driver Dossier
+    function openDriverModal(driverId) {
+      const d = ALL_DRIVERS.find(x => x.id === driverId);
+      if (!d) return;
+
+      const modalContent = document.getElementById('modal_content');
+      modalContent.innerHTML = `
+        <div style="display:flex; gap:20px; align-items:center; margin-bottom:24px;">
+          <img src="${d.photo}" alt="${d.name}" style="width:90px; height:90px; border-radius:20px; object-fit:cover; border:2px solid var(--primary-gold)">
+          <div>
+            <h3 style="font-family:var(--font-heading); font-size:1.6rem; color:#fff; display:flex; align-items:center; gap:8px;">
+              ${d.name} <span style="color:#38bdf8; font-size:1.2rem;">✓</span>
+            </h3>
+            <div style="color:var(--text-muted); font-size:0.9rem;">
+              Chauffeur ID: <strong>${d.profileId}</strong> &bull; Bengaluru Region
+            </div>
+            <div style="color:var(--accent-emerald); font-weight:600; font-size:0.85rem; margin-top:4px;">
+              🟢 Active &amp; Dispatch Ready
+            </div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; margin-bottom:20px;">
+          <h4 style="font-size:0.95rem; text-transform:uppercase; color:var(--primary-gold); margin-bottom:12px; letter-spacing:0.04em;">
+            Verified Government Credentials
+          </h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.9rem;">
+            <div><strong>ID Document:</strong> ${d.govtId.type} (${d.govtId.masked})</div>
+            <div><strong>ID Status:</strong> <span style="color:var(--accent-emerald)">✓ Verified &amp; Signed</span></div>
+            <div><strong>Driving Licence:</strong> ${d.licenceMasked}</div>
+            <div><strong>Licence Status:</strong> <span style="color:var(--accent-emerald)">✓ Active Commercial / Personal</span></div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; margin-bottom:24px;">
+          <h4 style="font-size:0.95rem; text-transform:uppercase; color:var(--primary-gold); margin-bottom:12px; letter-spacing:0.04em;">
+            Chauffeur Experience &amp; Competencies
+          </h4>
+          <p style="font-size:0.9rem; color:#cbd5e1; margin-bottom:8px;">
+            <strong>Driving Experience:</strong> ${d.experienceYears} Years &bull; Total Trips: ${d.trips}
+          </p>
+          <p style="font-size:0.9rem; color:#cbd5e1; margin-bottom:8px;">
+            <strong>Languages Spoken:</strong> ${d.languages.join(', ')}
+          </p>
+          <p style="font-size:0.9rem; color:#cbd5e1; margin-bottom:8px;">
+            <strong>Supported Transmissions:</strong> ${d.transmissions.join(', ')}
+          </p>
+          ${d.specialities ? `
+            <p style="font-size:0.9rem; color:#cbd5e1;">
+              <strong>Domain Specialities:</strong> ${d.specialities.join(' &bull; ')}
+            </p>
+          ` : ''}
+        </div>
+
+        <button class="book-btn" style="width:100%;" onclick="closeModal(); selectDriverForBooking(${d.id}, '${d.name}');">
+          Book ${d.name} for Your Trip
+        </button>
+      `;
+
+      document.getElementById('driverModal').classList.add('open');
+    }
+
+    function closeModal(e) {
+      document.getElementById('driverModal').classList.remove('open');
+    }
+
+    // Confirm Booking
+    async function confirmBooking() {
+      const customerName = document.getElementById('customer_name').value;
+      const pickup = document.getElementById('pickup_loc').value;
+      const destination = document.getElementById('dest_loc').value;
+      const serviceType = document.getElementById('service_type').value;
+      const transmission = document.getElementById('trans_type').value;
+      const hours = Number(document.getElementById('hours_slider').value);
+
+      if (!pickup) {
+        alert('Please specify a pickup location.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerName, pickup, destination, serviceType, transmission, hours })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          document.getElementById('booking_result').innerHTML = `<div style="color:#ef4444; margin-top:10px;">Error: ${data.error}</div>`;
+          return;
+        }
+
+        const assignedDriver = ALL_DRIVERS.find(d => d.id === data.driverId);
+        document.getElementById('booking_result').innerHTML = `
+          <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:16px; margin-top:14px;">
+            <div style="color:var(--accent-emerald); font-weight:700; font-size:1.05rem; margin-bottom:6px;">
+              🎉 Booking #${data.id} Confirmed!
+            </div>
+            <div style="font-size:0.88rem; color:#cbd5e1;">
+              Chauffeur: <strong>${assignedDriver ? assignedDriver.name : 'Matched Driver'}</strong> (${assignedDriver ? assignedDriver.profileId : ''})<br>
+              Total: <strong>₹${data.total}</strong> &bull; Status: <span style="color:var(--primary-gold)">${data.status}</span><br>
+              Your verified driver is en route to <em>${data.pickup}</em>.
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('booking_result').innerHTML = `<div style="color:#ef4444; margin-top:10px;">Failed to submit booking. Check server connection.</div>`;
+      }
+    }
+
+    // Driver Application Submit
+    async function submitDriverApplication() {
+      const name = document.getElementById('app_name').value;
+      const phone = document.getElementById('app_phone').value;
+      const govtIdType = document.getElementById('app_idtype').value;
+      const govtIdNumber = document.getElementById('app_idnum').value;
+      const licenceNumber = document.getElementById('app_lic').value;
+      const experienceYears = Number(document.getElementById('app_exp').value);
+
+      if (!name || !phone || !govtIdNumber || !licenceNumber) {
+        alert('Please complete all verification fields.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/drivers/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, govtIdType, govtIdNumber, licenceNumber, experienceYears })
+        });
+        const d = await res.json();
+        
+        if (res.ok) {
+          document.getElementById('app_status').innerHTML = `
+            <div style="color:var(--accent-emerald); font-weight:600;">
+              ✅ Application #${d.id} Submitted Successfully! Status: <em>${d.status}</em>.<br>
+              Our verification team will inspect your ${d.govtId.type} before activating your profile.
+            </div>
+          `;
+        } else {
+          document.getElementById('app_status').innerHTML = `<div style="color:#ef4444;">Error: ${d.error}</div>`;
+        }
+      } catch (err) {
+        document.getElementById('app_status').innerHTML = `<div style="color:#ef4444;">Failed to submit application.</div>`;
+      }
+    }
+
+    // Initialize
+    calculateFare();
+    fetchDrivers();
+  </script>
+</body>
+</html>
