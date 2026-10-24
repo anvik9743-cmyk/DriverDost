@@ -257,11 +257,10 @@ const server = http.createServer(async (req, res) => {
   if (p.startsWith('/api/')) return json(res, 404, { error: 'not found' });
 
   // ---- Static web apps ----
-  if (p === '/' || p === '/portal') return serveFile(res, path.join(ROOT, 'apps/portal/index.html'));
-  if (p === '/customer') return serveFile(res, path.join(ROOT, 'apps/customer-web/index.html'));
+  if (p === '/' || p === '/portal' || p === '/customer') return serveFile(res, path.join(ROOT, 'apps/customer-web/index.html'));
   if (p === '/driver') return serveFile(res, path.join(ROOT, 'apps/driver-app/index.html'));
   if (p === '/admin') return serveFile(res, path.join(ROOT, 'apps/admin/index.html'));
-  if (p === '/analysis') return serveFile(res, path.join(ROOT, 'apps/code-analysis/index.html'));
+  if (p === '/analysis' || p === '/code-analysis') return serveFile(res, path.join(ROOT, 'apps/code-analysis/index.html'));
   
   const staticFile = path.join(ROOT, p.replace(/^\//,''));
   if (staticFile.startsWith(ROOT) && fs.existsSync(staticFile)) return serveFile(res, staticFile);
