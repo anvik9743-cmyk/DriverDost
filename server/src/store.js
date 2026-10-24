@@ -20,6 +20,8 @@ const drivers = [
     transmissions: ['Manual', 'Automatic'],
     carTypes: ['Sedan', 'SUV', 'Hatchback', 'Luxury'],
     specialities: ['Night Driving Expert', 'Highway Specialist', 'City Commute'],
+    phone: '9876543210',
+    pin: '1234',
     city: 'Indiranagar, Bengaluru',
     location: { lat: 12.9784, lng: 77.6408, address: '100 Feet Rd, Indiranagar, Bengaluru' },
     badges: ['Identity Verified', 'Licence Verified', 'Background Check Completed']
@@ -44,6 +46,8 @@ const drivers = [
     transmissions: ['Automatic', 'Manual'],
     carTypes: ['Automatic Premium', 'Sedan', 'EV'],
     specialities: ['Smooth Chauffeur', 'Airport Route Specialist', 'EV Expert'],
+    phone: '9876543211',
+    pin: '1234',
     city: 'Koramangala, Bengaluru',
     location: { lat: 12.9352, lng: 77.6245, address: '80 Feet Rd, Koramangala, Bengaluru' },
     badges: ['Identity Verified', 'Licence Verified', 'Background Check Completed']
@@ -68,6 +72,8 @@ const drivers = [
     transmissions: ['Manual', 'Automatic'],
     carTypes: ['Sedan', 'SUV', 'Tempo Traveller'],
     specialities: ['Inter-city Trips', 'Outstation Veteran', 'Defensive Driving'],
+    phone: '9876543212',
+    pin: '1234',
     city: 'HSR Layout, Bengaluru',
     location: { lat: 12.9121, lng: 77.6446, address: 'Sector 1, HSR Layout, Bengaluru' },
     badges: ['Identity Verified', 'Licence Verified', 'Background Check Completed']
@@ -92,6 +98,8 @@ const drivers = [
     transmissions: ['Manual', 'Automatic'],
     carTypes: ['Luxury Sedans', 'SUVs', 'Manual/Automatic'],
     specialities: ['VIP Chauffeur', 'Wedding Fleet', 'Corporate Concierge'],
+    phone: '9876543213',
+    pin: '1234',
     city: 'Whitefield, Bengaluru',
     location: { lat: 12.9698, lng: 77.7499, address: 'ITPL Main Rd, Whitefield, Bengaluru' },
     badges: ['Identity Verified', 'Licence Verified', 'Background Check Completed']
@@ -116,6 +124,8 @@ const drivers = [
     transmissions: ['Automatic'],
     carTypes: ['Compact Automatic', 'Sedan', 'EV'],
     specialities: ['City Rush Hour', 'Punctuality Master', 'Family Rides'],
+    phone: '9876543214',
+    pin: '1234',
     city: 'Bellandur, Bengaluru',
     location: { lat: 12.9260, lng: 77.6762, address: 'Outer Ring Rd, Bellandur, Bengaluru' },
     badges: ['Identity Verified', 'Licence Verified', 'Background Check Completed']
@@ -140,6 +150,8 @@ const drivers = [
     transmissions: ['Manual'],
     carTypes: ['Hatchback', 'Sedan'],
     specialities: ['Local Bangalore Expert', 'Peak Traffic Handling', 'Luggage Assistance'],
+    phone: '9876543215',
+    pin: '1234',
     city: 'Jayanagar, Bengaluru',
     location: { lat: 12.9308, lng: 77.5838, address: '4th Block, Jayanagar, Bengaluru' },
     badges: ['Identity Verified', 'Licence Verified', 'Background Check Completed']
@@ -186,5 +198,6 @@ module.exports = {
   // Admin accounts: { id, name, username, phone, salt, passwordHash }
   admins: [],
   sessions: new Map(), // token -> { adminId, expiresAt, username }
+  driverSessions: new Map(), // token -> { driverId, expiresAt, profileId }
   nextId: { booking: 102, incident: 1, application: 1, admin: 1 }
 };

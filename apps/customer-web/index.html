@@ -675,7 +675,7 @@
         <a href="#book" class="active">Book a Chauffeur</a>
         <a href="#drivers">Verified Drivers</a>
         <a href="#apply">Partner With Us</a>
-        <a href="/analysis" target="_blank" style="color:var(--accent-cyan)">Code Analysis</a>
+        <a href="/driver/login" target="_blank" style="color:var(--accent-cyan)">🚗 Driver Login</a>
         <a href="/admin" class="portal-btn">🔒 Admin Portal</a>
       </nav>
     </div>
@@ -852,6 +852,119 @@
     <div class="modal-dossier" onclick="event.stopPropagation()">
       <button class="modal-close" onclick="closeModal()">✕</button>
       <div id="modal_content"></div>
+    </div>
+  </div>
+
+  <!-- LIVE TRIP TRACKING & NAVIGATION MODAL -->
+  <div class="modal-overlay" id="trackingModal">
+    <div class="modal-dossier" style="max-width:760px; width:95%; max-height:92vh; overflow-y:auto;" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--border-subtle); padding-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.5rem;">🧭</span>
+          <div>
+            <h3 style="font-family:var(--font-heading); color:#fff; font-size:1.35rem; font-weight:800; margin:0;" id="track_title">Live Trip Navigation &amp; Tracking</h3>
+            <div style="font-size:0.8rem; color:var(--text-muted);" id="track_booking_subtitle">Trip Booking # -- &bull; Synchronizing with Chauffeur Cockpit</div>
+          </div>
+        </div>
+        <button class="modal-close" style="position:static;" onclick="closeTrackingModal()">✕</button>
+      </div>
+
+      <!-- STATUS & OTP HERO -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;" id="track_hero_grid">
+        <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,78,59,0.2)); border:1px solid rgba(16,185,129,0.35); border-radius:14px; padding:16px;">
+          <div style="font-size:0.75rem; color:#a7f3d0; text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Trip Status</div>
+          <div style="font-size:1.35rem; font-weight:900; color:#34d399; margin:4px 0;" id="track_status_lbl">DRIVER ASSIGNED</div>
+          <div style="font-size:0.8rem; color:#cbd5e1;" id="track_status_desc">Your chauffeur has accepted the ride and is en route.</div>
+        </div>
+        <div style="background:linear-gradient(135deg, rgba(245,158,11,0.15), rgba(120,53,15,0.2)); border:1px solid rgba(245,158,11,0.4); border-radius:14px; padding:16px; text-align:center;">
+          <div style="font-size:0.75rem; color:#fde68a; text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Your Start Trip OTP</div>
+          <div style="font-size:1.85rem; font-weight:900; color:var(--primary-gold); letter-spacing:0.25em; margin:2px 0;" id="track_otp_val">----</div>
+          <div style="font-size:0.75rem; color:#cbd5e1;">Share this with your driver upon arrival</div>
+        </div>
+      </div>
+
+      <!-- SIMULATED LIVE NAVIGATION MAP CANVAS -->
+      <div style="background:#090d16; border:1px solid rgba(56,189,248,0.25); border-radius:16px; padding:16px; margin-bottom:18px; position:relative; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-size:0.82rem; font-weight:700; color:var(--accent-cyan); display:flex; align-items:center; gap:6px;">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#38bdf8; animation:pulse 1.8s infinite;"></span>
+            LIVE CHAUFFEUR GPS TELEMETRY
+          </div>
+          <div style="font-size:0.8rem; color:#34d399; font-weight:700;" id="track_eta_badge">ETA: 4 mins (1.8 km)</div>
+        </div>
+
+        <!-- SVG ROUTE SIMULATION -->
+        <div style="height:140px; width:100%; position:relative; background:radial-gradient(circle at 50% 50%, rgba(30,41,59,0.5) 0%, rgba(8,13,26,0.9) 100%); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+          <svg width="100%" height="100%" viewBox="0 0 500 120" preserveAspectRatio="none" style="position:absolute; inset:0;">
+            <!-- Road path -->
+            <path d="M 40 80 Q 160 20 280 70 T 460 40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20" stroke-linecap="round"/>
+            <path d="M 40 80 Q 160 20 280 70 T 460 40" fill="none" stroke="rgba(56,189,248,0.4)" stroke-width="6" stroke-dasharray="8 6"/>
+            <!-- Start point (Driver) -->
+            <circle cx="40" cy="80" r="10" fill="#38bdf8" />
+            <text x="40" y="105" fill="#38bdf8" font-size="11" font-weight="700" text-anchor="middle">Chauffeur</text>
+            <!-- Destination (Pickup) -->
+            <circle cx="460" cy="40" r="10" fill="#f59e0b" />
+            <text x="460" y="65" fill="#f59e0b" font-size="11" font-weight="700" text-anchor="middle">Your Car</text>
+            <!-- Moving Car Icon -->
+            <g id="track_moving_car" transform="translate(180, 45)">
+              <circle cx="0" cy="0" r="14" fill="#10b981" />
+              <text x="0" y="4" fill="#fff" font-size="12" text-anchor="middle">🚗</text>
+            </g>
+          </svg>
+          <div style="position:absolute; bottom:8px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:6px; font-size:0.75rem; color:#cbd5e1;">
+            📍 Route: <strong>Indiranagar 100 Feet Rd</strong> corridor
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+          <span style="font-size:0.78rem; color:var(--text-muted);">Turn-by-turn: En route via 80 Feet Rd &bull; Traffic: Smooth</span>
+          <a id="track_gmaps_link" href="https://maps.google.com" target="_blank" style="font-size:0.8rem; color:var(--primary-gold); text-decoration:none; font-weight:700;">
+            Open in Google Maps ↗
+          </a>
+        </div>
+      </div>
+
+      <!-- ASSIGNED CHAUFFEUR & VEHICLE CARD -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:14px; padding:16px; margin-bottom:18px; display:flex; gap:16px; align-items:center;">
+        <img src="" id="track_drv_photo" style="width:68px; height:68px; border-radius:16px; object-fit:cover; border:2px solid var(--primary-gold);" alt="Chauffeur">
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700; color:#fff; font-size:1.1rem;" id="track_drv_name">Ramesh Kumar</div>
+            <div style="color:var(--primary-gold); font-weight:700;" id="track_drv_rating">★ 4.9 (842 trips)</div>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin:2px 0;">
+            Chauffeur ID: <strong id="track_drv_id" style="color:#fff;">DM1001</strong> &bull; Experience: 12y &bull; Languages: English, Kannada, Hindi
+          </div>
+          <div style="font-size:0.78rem; color:#34d399; font-weight:600;">
+            ✓ Identity Verified (Aadhaar ****4821) &bull; ✓ Commercial Licence Verified &bull; Reliability 96%
+          </div>
+        </div>
+        <a id="track_call_btn" href="tel:9876543210" style="padding:10px 16px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.85rem;">
+          📞 Call
+        </a>
+      </div>
+
+      <!-- TRIP LIFECYCLE STEPPER -->
+      <div style="background:rgba(0,0,0,0.25); border-radius:12px; padding:16px; margin-bottom:18px;">
+        <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:12px;">Trip Progress Lifecycle</div>
+        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; text-align:center; font-size:0.75rem;">
+          <div id="step_assigned" style="padding:8px 4px; border-radius:8px; background:rgba(16,185,129,0.2); color:#34d399; font-weight:700;">1. Assigned</div>
+          <div id="step_arriving" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">2. Arriving</div>
+          <div id="step_arrived" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">3. Arrived</div>
+          <div id="step_inspect" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">4. Inspected</div>
+          <div id="step_started" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">5. In Trip</div>
+        </div>
+      </div>
+
+      <!-- ACTIONS & EMERGENCY -->
+      <div style="display:flex; gap:12px;">
+        <button style="flex:1; padding:12px; border-radius:10px; border:1px solid rgba(244,63,94,0.4); background:rgba(244,63,94,0.15); color:#f43f5e; font-weight:700; cursor:pointer;" onclick="triggerCustomerSos()">
+          🚨 Emergency SOS Alert
+        </button>
+        <button style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border-subtle); background:rgba(255,255,255,0.05); color:#cbd5e1; font-weight:600; cursor:pointer;" onclick="cancelActiveTrip()">
+          Cancel Booking
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1055,11 +1168,15 @@
       document.getElementById('driverModal').classList.remove('open');
     }
 
-    // Confirm Booking
+    // Active Tracking State
+    let activeBookingId = null;
+    let trackingPollInterval = null;
+
+    // Confirm Booking & Launch Live Navigation
     async function confirmBooking() {
-      const customerName = document.getElementById('customer_name').value;
+      const customerName = document.getElementById('customer_name').value || 'Customer';
       const pickup = document.getElementById('pickup_loc').value;
-      const destination = document.getElementById('dest_loc').value;
+      const destination = document.getElementById('dest_loc').value || 'Kempegowda International Airport (BLR)';
       const serviceType = document.getElementById('service_type').value;
       const transmission = document.getElementById('trans_type').value;
       const hours = Number(document.getElementById('hours_slider').value);
@@ -1084,19 +1201,153 @@
 
         const assignedDriver = ALL_DRIVERS.find(d => d.id === data.driverId);
         document.getElementById('booking_result').innerHTML = `
-          <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:16px; margin-top:14px;">
-            <div style="color:var(--accent-emerald); font-weight:700; font-size:1.05rem; margin-bottom:6px;">
-              🎉 Booking #${data.id} Confirmed!
-            </div>
-            <div style="font-size:0.88rem; color:#cbd5e1;">
-              Chauffeur: <strong>${assignedDriver ? assignedDriver.name : 'Matched Driver'}</strong> (${assignedDriver ? assignedDriver.profileId : ''})<br>
-              Total: <strong>₹${data.total}</strong> &bull; Status: <span style="color:var(--primary-gold)">${data.status}</span><br>
-              Your verified driver is en route to <em>${data.pickup}</em>.
+          <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; margin-top:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="color:var(--accent-emerald); font-weight:700; font-size:1.05rem;">
+                  🎉 Booking #${data.id} Confirmed!
+                </div>
+                <div style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">
+                  Chauffeur: <strong>${assignedDriver ? assignedDriver.name : 'Matched Chauffeur'}</strong> &bull; Total: <strong>₹${data.total}</strong>
+                </div>
+              </div>
+              <button onclick="openTripTracking(${data.id})" style="background:var(--primary-gold); color:#070b14; font-weight:800; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;">
+                🗺️ View Live Navigation
+              </button>
             </div>
           </div>
         `;
+
+        // Automatically open the live navigation tracking modal
+        openTripTracking(data.id);
       } catch (err) {
         document.getElementById('booking_result').innerHTML = `<div style="color:#ef4444; margin-top:10px;">Failed to submit booking. Check server connection.</div>`;
+      }
+    }
+
+    // Open Live Trip Tracking & Navigation Console
+    async function openTripTracking(bookingId) {
+      activeBookingId = bookingId;
+      document.getElementById('trackingModal').classList.add('open');
+      await syncTrackingState();
+
+      if (trackingPollInterval) clearInterval(trackingPollInterval);
+      trackingPollInterval = setInterval(syncTrackingState, 2500);
+    }
+
+    async function syncTrackingState() {
+      if (!activeBookingId) return;
+      try {
+        const res = await fetch(`/api/bookings/${activeBookingId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const b = data.booking;
+        const d = data.driver;
+
+        document.getElementById('track_title').textContent = `Live Navigation: ${b.pickup.split(',')[0]} → ${b.destination.split(',')[0]}`;
+        document.getElementById('track_booking_subtitle').textContent = `Booking #${b.id} &bull; Service: ${b.serviceType || 'Hourly'} &bull; Fare: ₹${b.total}`;
+        document.getElementById('track_status_lbl').textContent = b.status.replace(/_/g, ' ');
+        document.getElementById('track_otp_val').textContent = b.otp || '4821';
+
+        // Update Google Maps Link
+        document.getElementById('track_gmaps_link').href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.status === 'TRIP_STARTED' ? b.destination : b.pickup)}`;
+
+        // Status Descriptions
+        const descMap = {
+          'SEARCHING_FOR_DRIVER': 'Broadcasting trip request to verified chauffeurs within 3 km...',
+          'DRIVER_ASSIGNED': 'Chauffeur assigned and preparing vehicle departure.',
+          'DRIVER_ARRIVING': 'Chauffeur is currently driving to your pickup location.',
+          'DRIVER_ARRIVED': 'Chauffeur has arrived at your car! Share your 4-digit OTP below.',
+          'INSPECTION_COMPLETED': 'Vehicle pre-trip condition inspected & logged. Ready to roll.',
+          'TRIP_STARTED': 'Journey in progress. Professional chauffeur is piloting your car.',
+          'TRIP_COMPLETED': 'Trip safely completed! Thank you for choosing DriverDost.',
+          'CANCELLED': 'This booking has been cancelled.'
+        };
+        document.getElementById('track_status_desc').textContent = descMap[b.status] || b.status;
+
+        // Driver card
+        if (d) {
+          document.getElementById('track_drv_name').textContent = d.name;
+          document.getElementById('track_drv_id').textContent = d.profileId;
+          document.getElementById('track_drv_rating').textContent = `★ ${d.rating} (${d.trips} trips)`;
+          document.getElementById('track_drv_photo').src = d.photo;
+        }
+
+        // Stepper Highlights
+        const steps = ['step_assigned', 'step_arriving', 'step_arrived', 'step_inspect', 'step_started'];
+        const activeIdx = {
+          'DRIVER_ASSIGNED': 0,
+          'DRIVER_ARRIVING': 1,
+          'DRIVER_ARRIVED': 2,
+          'INSPECTION_COMPLETED': 3,
+          'TRIP_STARTED': 4,
+          'TRIP_COMPLETED': 5
+        }[b.status] || 0;
+
+        steps.forEach((sId, idx) => {
+          const el = document.getElementById(sId);
+          if (idx <= activeIdx) {
+            el.style.background = 'rgba(16,185,129,0.2)';
+            el.style.color = '#34d399';
+            el.style.fontWeight = '700';
+          } else {
+            el.style.background = 'rgba(255,255,255,0.05)';
+            el.style.color = 'var(--text-muted)';
+            el.style.fontWeight = '400';
+          }
+        });
+
+        // Car moving simulation on SVG
+        const carIcon = document.getElementById('track_moving_car');
+        const posMap = {
+          'DRIVER_ASSIGNED': 'translate(80, 70)',
+          'DRIVER_ARRIVING': 'translate(220, 48)',
+          'DRIVER_ARRIVED': 'translate(440, 40)',
+          'INSPECTION_COMPLETED': 'translate(440, 40)',
+          'TRIP_STARTED': 'translate(300, 65)',
+          'TRIP_COMPLETED': 'translate(460, 40)'
+        };
+        if (posMap[b.status]) carIcon.setAttribute('transform', posMap[b.status]);
+
+        // ETA badge
+        const etaMap = {
+          'DRIVER_ASSIGNED': 'ETA: 7 mins (2.8 km)',
+          'DRIVER_ARRIVING': 'ETA: 3 mins (1.1 km)',
+          'DRIVER_ARRIVED': 'Arrived at your vehicle',
+          'INSPECTION_COMPLETED': 'Inspection Verified',
+          'TRIP_STARTED': 'En Route to Destination',
+          'TRIP_COMPLETED': 'Arrived at Destination'
+        };
+        document.getElementById('track_eta_badge').textContent = etaMap[b.status] || 'Active Dispatch';
+
+      } catch (err) {
+        console.error('Tracking sync error:', err);
+      }
+    }
+
+    async function triggerCustomerSos() {
+      if (confirm('🚨 TRIGGER EMERGENCY SOS ALERT? This immediately alerts the 24/7 DriverDost operations center with your live GPS location.')) {
+        await fetch(`/api/bookings/${activeBookingId}/sos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ triggerBy: 'Customer', reason: 'Customer triggered Emergency SOS from live tracking console' })
+        });
+        alert('🚨 Emergency protocol activated. Operations center is dispatching assistance.');
+      }
+    }
+
+    async function cancelActiveTrip() {
+      if (confirm('Are you sure you want to cancel this booking?')) {
+        await fetch(`/api/bookings/${activeBookingId}/cancel`, { method: 'POST' });
+        syncTrackingState();
+      }
+    }
+
+    function closeTrackingModal() {
+      document.getElementById('trackingModal').classList.remove('open');
+      if (trackingPollInterval) {
+        clearInterval(trackingPollInterval);
+        trackingPollInterval = null;
       }
     }
 

@@ -162,14 +162,108 @@ function publicAdmin(a) {
   return { id: a.id, name: a.name, username: a.username, phone: a.phone };
 }
 
+/**
+ * Find driver by Profile ID (e.g. DM1001), phone number, or numeric ID
+ */
+function findDriver(identifier) {
+  if (!identifier) return null;
+  const raw = String(identifier).trim().toUpperCase();
+  const phone = normalizePhone(identifier);
+  const numId = Number(identifier);
+
+  return store.drivers.find(d => 
+    d.profileId.toUpperCase() === raw ||
+    (phone.length === 10 && d.phone === phone) ||
+    (!isNaN(numId) && d.id === numId)
+  ) || null;
+}
+
+/**
+ * Authenticate chauffeur with rate-limiting, PIN verification, and session token
+ */
+async function loginDriver(identifier, pin) {
+  const rateStatus = checkRateLimit(identifier);
+  if (!rateStatus.allowed) {
+    return { error: rateStatus.message, rateLimited: true };
+  }
+
+  const driver = findDriver(identifier);
+  if (!driver) {
+    recordFailedAttempt(identifier);
+    return { error: 'Chauffeur not found with this mobile number or Partner ID.' };
+  }
+
+  const validPin = driver.pin || '1234';
+  const inputPin = String(pin || '').trim();
+
+  if (inputPin !== validPin) {
+    recordFailedAttempt(identifier);
+    return { error: 'Invalid 4-digit Chauffeur PIN. Default demo PIN is 1234.' };
+  }
+
+  clearFailedAttempts(identifier);
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days session
+  store.driverSessions.set(token, { driverId: driver.id, profileId: driver.profileId, expiresAt });
+
+  return { token, expiresAt, driver: publicDriver(driver) };
+}
+
+/**
+ * Extract authenticated driver from Bearer header
+ */
+function driverFromToken(req) {
+  const rawHeader = req.headers.authorization || '';
+  const token = rawHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return null;
+
+  const session = store.driverSessions.get(token);
+  if (!session) return null;
+
+  if (Date.now() > session.expiresAt) {
+    store.driverSessions.delete(token);
+    return null;
+  }
+
+  return store.drivers.find(d => d.id === session.driverId) || null;
+}
+
+function publicDriver(d) {
+  if (!d) return null;
+  return {
+    id: d.id,
+    profileId: d.profileId,
+    name: d.name,
+    phone: d.phone,
+    photo: d.photo,
+    rating: d.rating,
+    trips: d.trips,
+    reliabilityScore: d.reliabilityScore,
+    distanceKm: d.distanceKm,
+    online: d.online,
+    approved: d.approved,
+    city: d.city,
+    location: d.location,
+    transmissions: d.transmissions,
+    carTypes: d.carTypes,
+    specialities: d.specialities,
+    badges: d.badges
+  };
+}
+
 module.exports = {
   createAdmin,
   findAdmin,
   login,
   adminFromToken,
   publicAdmin,
+  findDriver,
+  loginDriver,
+  driverFromToken,
+  publicDriver,
   normalizePhone,
   hash,
   verify,
   checkRateLimit
 };
+

@@ -1,7 +1,7 @@
 /**
  * DriverDost Lean MVP API — zero-dependency Node.js server.
  * Run: node server/src/index.js  (PORT env, default 4000)
- * Serves: / portal landing, /customer customer web, /driver driver app, /admin admin dashboard, /analysis
+ * Serves: / customer web, /driver chauffeur app, /driver/login driver login, /admin admin command center
  */
 const http = require('http'), fs = require('fs'), path = require('path');
 const store = require('./store');
@@ -94,14 +94,47 @@ const server = http.createServer(async (req, res) => {
     return json(res, 201, booking);
   }
 
-  // Booking lifecycle actions
-  const bm = p.match(/^\/api\/bookings\/(\d+)\/(accept|arrived|start|complete|cancel)$/);
+  // Single booking status & live tracking endpoint
+  const singleBm = p.match(/^\/api\/bookings\/(\d+)$/);
+  if (singleBm && req.method === 'GET') {
+    const booking = store.bookings.find(x => x.id === Number(singleBm[1]));
+    if (!booking) return json(res, 404, { error: 'booking not found' });
+    const driver = store.drivers.find(d => d.id === booking.driverId) || null;
+    return json(res, 200, { booking, driver, telemetry: store.liveTelemetry[booking.driverId] || null });
+  }
+
+  // Booking lifecycle actions: accept, reject, arriving, arrived, start, complete, cancel
+  const bm = p.match(/^\/api\/bookings\/(\d+)\/(accept|reject|arriving|arrived|start|complete|cancel)$/);
   if (bm && req.method === 'POST') {
     const booking = store.bookings.find(x => x.id === Number(bm[1]));
     if (!booking) return json(res, 404, { error: 'booking not found' });
-    const flow = { accept:'DRIVER_ASSIGNED', arrived:'DRIVER_ARRIVED', start:'TRIP_STARTED', complete:'TRIP_COMPLETED', cancel:'CANCELLED' };
-    booking.status = flow[bm[2]];
-    return json(res, 200, booking);
+    const action = bm[2];
+
+    if (action === 'reject') {
+      booking.rejectedBy = booking.rejectedBy || [];
+      if (booking.driverId) booking.rejectedBy.push(booking.driverId);
+      // Auto-reassign to next best available verified driver
+      const nextDriver = store.drivers.find(d => d.approved && d.online && !booking.rejectedBy.includes(d.id));
+      if (nextDriver) {
+        booking.driverId = nextDriver.id;
+        booking.status = 'DRIVER_ASSIGNED';
+      } else {
+        booking.driverId = null;
+        booking.status = 'SEARCHING_FOR_DRIVER';
+      }
+      return json(res, 200, { success: true, message: 'Trip declined. Auto-reassigned.', booking });
+    }
+
+    const flow = {
+      accept: 'DRIVER_ASSIGNED',
+      arriving: 'DRIVER_ARRIVING',
+      arrived: 'DRIVER_ARRIVED',
+      start: 'TRIP_STARTED',
+      complete: 'TRIP_COMPLETED',
+      cancel: 'CANCELLED'
+    };
+    booking.status = flow[action];
+    return json(res, 200, { success: true, booking });
   }
 
   // Start Trip OTP Verification
@@ -238,6 +271,30 @@ const server = http.createServer(async (req, res) => {
     store.incidents.push(inc); return json(res, 201, inc);
   }
 
+  // ---- Chauffeur / Driver auth ----
+  if (p === '/api/driver/login' && req.method === 'POST') {
+    const b = await body(req);
+    const s = await auth.loginDriver(b.identifier || b.phone || b.profileId, b.pin || b.password);
+    if (s && s.rateLimited) return json(res, 429, { error: s.error });
+    if (!s || s.error) return json(res, 401, { error: s?.error || 'Invalid driver credentials' });
+    return json(res, 200, s);
+  }
+
+  if (p === '/api/driver/me' && req.method === 'GET') {
+    const driver = auth.driverFromToken(req);
+    if (!driver) return json(res, 401, { error: 'Chauffeur authentication required' });
+    const activeBooking = store.bookings.find(b => 
+      (b.driverId === driver.id) && !['TRIP_COMPLETED', 'CANCELLED'].includes(b.status)
+    );
+    return json(res, 200, { driver: auth.publicDriver(driver), activeBooking: activeBooking || null });
+  }
+
+  if (p === '/api/driver/logout' && req.method === 'POST') {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+    if (token) store.driverSessions.delete(token);
+    return json(res, 200, { ok: true, message: 'Logged out successfully' });
+  }
+
   // ---- Admin auth ----
   if (p === '/api/admin/status' && req.method === 'GET')
     return json(res, 200, { hasAdmin: store.admins.length > 0, loggedIn: !!auth.adminFromToken(req) });
@@ -291,12 +348,14 @@ const server = http.createServer(async (req, res) => {
   // ---- Static web apps ----
   if (p === '/' || p === '/portal' || p === '/customer') return serveFile(res, path.join(ROOT, 'apps/customer-web/index.html'));
   if (p === '/driver') return serveFile(res, path.join(ROOT, 'apps/driver-app/index.html'));
+  if (p === '/driver/login' || p === '/driver-login') return serveFile(res, path.join(ROOT, 'apps/driver-login/index.html'));
   if (p === '/admin') return serveFile(res, path.join(ROOT, 'apps/admin/index.html'));
-  if (p === '/analysis' || p === '/code-analysis') return serveFile(res, path.join(ROOT, 'apps/code-analysis/index.html'));
+  if (p === '/analysis' || p === '/code-analysis') return serveFile(res, path.join(ROOT, 'apps/driver-login/index.html'));
   
   const staticFile = path.join(ROOT, p.replace(/^\//,''));
   if (staticFile.startsWith(ROOT) && fs.existsSync(staticFile)) return serveFile(res, staticFile);
   res.writeHead(404); res.end('Not found');
 });
 
-server.listen(PORT, () => console.log(`DriverDost MVP running at http://localhost:${PORT}  (/ portal, /customer, /driver, /admin, /analysis)`));
+server.listen(PORT, () => console.log(`DriverDost MVP running at http://localhost:${PORT}  (/ customer, /driver, /driver/login, /admin)`));
+
