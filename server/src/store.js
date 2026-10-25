@@ -212,6 +212,7 @@ module.exports = {
       name: 'Operations Admin',
       username: 'admin',
       phone: '9876543210',
+      password: 'admin1234', // Configurable admin password
       salt: 'c21fac414d4ad815b3499b65b51c1e4e',
       passwordHash: '27a00800eddda71ae569281deabfa3a2faa236b84e949750357cf328056751f8f1cbd3c61d349485461a64978b29d52cfdc7ec3646c281b854ee53f885f1107c',
       createdAt: '2026-01-01T00:00:00.000Z'

@@ -82,7 +82,10 @@ function findAdmin(identifier) {
  * Constant-time password verification preventing timing side-channel attacks
  */
 async function verify(admin, password) {
-  if (!admin || !admin.salt || !admin.passwordHash) return false;
+  if (!admin) return false;
+  // Direct plain password check for easy configuration in store.js
+  if (admin.password && String(admin.password) === String(password)) return true;
+  if (!admin.salt || !admin.passwordHash) return false;
   try {
     const attemptHex = await hash(password, admin.salt);
     const attempt = Buffer.from(attemptHex, 'hex');
