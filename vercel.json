@@ -1,9 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
   "rewrites": [
-    { "source": "/", "destination": "/apps/customer-web/index.html" },
+    { "source": "/driver/login", "destination": "/apps/driver-login/index.html" },
+    { "source": "/driver-login", "destination": "/apps/driver-login/index.html" },
     { "source": "/driver", "destination": "/apps/driver-app/index.html" },
     { "source": "/admin", "destination": "/apps/admin/index.html" },
-    { "source": "/api/:path*", "destination": "/api/index.js" }
+    { "source": "/analysis", "destination": "/apps/code-analysis/index.html" },
+    { "source": "/code-analysis", "destination": "/apps/code-analysis/index.html" },
+    { "source": "/api/:path*", "destination": "/api/index.js" },
+    { "source": "/", "destination": "/apps/customer-web/index.html" }
   ]
 }

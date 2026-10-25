@@ -163,6 +163,7 @@
       margin-bottom: 12px;
       background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .hero-sub {
@@ -651,7 +652,59 @@
       .drivers-grid { grid-template-columns: 1fr; }
       .hero-headline { font-size: 1.85rem; }
     }
+
+    /* PAYMENT & RAZORPAY STYLES */
+    .tip-chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tip-chip:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+    .tip-chip.active {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-color: #f59e0b;
+      color: #070b14;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);
+    }
+    .razorpay-method-tab {
+      flex: 1;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .razorpay-method-tab.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+      color: #34d399;
+    }
+    .star-btn {
+      color: #64748b;
+      transition: color 0.15s, transform 0.15s;
+      user-select: none;
+    }
+    .star-btn.hover, .star-btn.selected {
+      color: #fbbf24;
+      transform: scale(1.15);
+    }
   </style>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -947,12 +1000,128 @@
       <!-- TRIP LIFECYCLE STEPPER -->
       <div style="background:rgba(0,0,0,0.25); border-radius:12px; padding:16px; margin-bottom:18px;">
         <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:12px;">Trip Progress Lifecycle</div>
-        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; text-align:center; font-size:0.75rem;">
+        <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; text-align:center; font-size:0.72rem;">
           <div id="step_assigned" style="padding:8px 4px; border-radius:8px; background:rgba(16,185,129,0.2); color:#34d399; font-weight:700;">1. Assigned</div>
           <div id="step_arriving" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">2. Arriving</div>
           <div id="step_arrived" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">3. Arrived</div>
           <div id="step_inspect" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">4. Inspected</div>
           <div id="step_started" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">5. In Trip</div>
+          <div id="step_completed" style="padding:8px 4px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--text-muted);">6. Settle &amp; Pay</div>
+        </div>
+      </div>
+
+      <!-- POST-RIDE FARE SETTLEMENT & RAZORPAY PAYMENT CARD (Active when Trip Completed) -->
+      <div id="track_payment_card" style="display:none; background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,78,59,0.2)); border:1px solid rgba(16,185,129,0.35); border-radius:16px; padding:20px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.4rem;">🏁</span>
+            <div>
+              <div style="font-family:var(--font-heading); font-size:1.15rem; font-weight:800; color:#fff;">Trip Safely Completed!</div>
+              <div style="font-size:0.78rem; color:#a7f3d0;">Vehicle handed back safely. Please settle the ride fare.</div>
+            </div>
+          </div>
+          <span style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:700;">PAYMENT DUE</span>
+        </div>
+
+        <!-- Itemized Bill -->
+        <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.85rem; color:#cbd5e1;">
+            <span>Chauffeur Service (<span id="pay_hours_lbl">3 hrs</span> @ <span id="pay_rate_lbl">₹149/hr</span>)</span>
+            <span style="font-weight:700; color:#fff;" id="pay_base_fare">₹447</span>
+          </div>
+          <div id="pay_night_row" style="display:none; justify-content:space-between; margin-bottom:8px; font-size:0.85rem; color:#cbd5e1;">
+            <span>Night Charge (10:00 PM - 6:00 AM)</span>
+            <span style="font-weight:700; color:#fff;" id="pay_night_val">₹200</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:0.85rem; color:#cbd5e1;">
+            <span>Platform Service &amp; Safety Coverage</span>
+            <span style="font-weight:700; color:#34d399;">Included</span>
+          </div>
+
+          <!-- Tip Selection -->
+          <div style="padding-top:12px; border-top:1px dashed rgba(255,255,255,0.12); margin-top:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.82rem; color:#fbbf24; font-weight:700;">💖 Chauffeur Tip (100% directly to driver):</span>
+              <span style="font-size:0.85rem; font-weight:700; color:#fbbf24;" id="tip_selected_lbl">₹0</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="tip-chip active" onclick="selectTip(0, this)">No Tip</button>
+              <button type="button" class="tip-chip" onclick="selectTip(50, this)">+ ₹50</button>
+              <button type="button" class="tip-chip" onclick="selectTip(100, this)">+ ₹100</button>
+              <button type="button" class="tip-chip" onclick="selectTip(200, this)">+ ₹200</button>
+            </div>
+          </div>
+
+          <!-- Total Amount -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.15);">
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Final Amount Payable</div>
+              <div style="font-size:0.75rem; color:#94a3b8;">Driver gets 80% + 100% tip</div>
+            </div>
+            <div style="font-size:1.6rem; font-weight:900; color:#10b981;" id="pay_total_amount">₹447</div>
+          </div>
+        </div>
+
+        <!-- Payment Actions -->
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button id="btn_pay_razorpay" onclick="initiateRazorpayPayment()" style="width:100%; padding:15px; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:12px; color:#fff; font-family:var(--font-heading); font-size:1.05rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 6px 20px rgba(16,185,129,0.35); transition:transform 0.2s;">
+            <span>💳 Pay with Razorpay</span>
+            <span style="font-size:0.78rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:6px; font-weight:600;">UPI &bull; Cards &bull; NetBanking</span>
+          </button>
+          <div style="display:flex; gap:10px;">
+            <button onclick="payWithCash()" style="flex:1; padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:#cbd5e1; font-size:0.88rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
+              💵 Pay Cash to Chauffeur
+            </button>
+            <button onclick="openDriverUpiQr()" style="flex:1; padding:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:10px; color:#38bdf8; font-size:0.88rem; font-weight:600; cursor:pointer;">
+              📱 Show Driver UPI QR
+            </button>
+          </div>
+          <div style="text-align:center; font-size:0.75rem; color:#64748b; margin-top:2px;">
+            🔒 256-Bit SSL Encrypted &bull; PCI-DSS Level 1 Certified via Razorpay
+          </div>
+        </div>
+      </div>
+
+      <!-- POST-RIDE PAID CONFIRMATION, TAX RECEIPT & 5-STAR RATING CARD (Active when Paid) -->
+      <div id="track_paid_receipt_card" style="display:none; background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,78,59,0.25)); border:1px solid rgba(16,185,129,0.4); border-radius:16px; padding:20px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.6rem;">✅</span>
+            <div>
+              <div style="font-family:var(--font-heading); font-size:1.2rem; font-weight:800; color:#34d399;">Payment Completed &amp; Settled!</div>
+              <div style="font-size:0.78rem; color:#cbd5e1;" id="receipt_subtext">Settled via Razorpay &bull; Txn #----</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.5rem; font-weight:900; color:#fff;" id="receipt_paid_val">₹447</div>
+            <span style="background:rgba(16,185,129,0.25); color:#34d399; font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:6px;">PAID IN FULL</span>
+          </div>
+        </div>
+
+        <!-- Receipt Action -->
+        <button onclick="printTripReceipt()" style="width:100%; padding:10px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:#f8fafc; font-size:0.85rem; font-weight:700; cursor:pointer; margin-bottom:18px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span>📄 View &amp; Print Official Tax Invoice</span>
+        </button>
+
+        <!-- Driver Rating & Feedback -->
+        <div style="background:rgba(0,0,0,0.25); border-radius:12px; padding:16px;" id="rating_container">
+          <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:4px;">How was your chauffeur's driving?</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">Your rating directly influences driver reliability score &amp; bonuses.</div>
+          
+          <div style="display:flex; gap:10px; font-size:2rem; cursor:pointer; margin-bottom:12px;" id="star_rating_box">
+            <span class="star-btn selected" onclick="setDriverRating(1)">★</span>
+            <span class="star-btn selected" onclick="setDriverRating(2)">★</span>
+            <span class="star-btn selected" onclick="setDriverRating(3)">★</span>
+            <span class="star-btn selected" onclick="setDriverRating(4)">★</span>
+            <span class="star-btn selected" onclick="setDriverRating(5)">★</span>
+          </div>
+          <textarea id="trip_review_text" placeholder="Tell us about punctuality, driving smoothness, or route expertise..." style="width:100%; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px; color:#fff; font-size:0.85rem; resize:vertical; min-height:60px; margin-bottom:10px; font-family:var(--font-body);"></textarea>
+          <button id="btn_submit_rating" onclick="submitTripRating()" style="background:linear-gradient(135deg, var(--primary-gold), var(--primary-amber)); color:#070b14; border:none; padding:10px 20px; border-radius:8px; font-weight:800; font-size:0.88rem; cursor:pointer;">
+            Submit Rating &amp; Review ★
+          </button>
+          <div id="rating_success_msg" style="display:none; color:#34d399; font-weight:700; font-size:0.85rem; margin-top:8px;">
+            ✓ Thank you! Your review has been recorded.
+          </div>
         </div>
       </div>
 
@@ -961,9 +1130,92 @@
         <button style="flex:1; padding:12px; border-radius:10px; border:1px solid rgba(244,63,94,0.4); background:rgba(244,63,94,0.15); color:#f43f5e; font-weight:700; cursor:pointer;" onclick="triggerCustomerSos()">
           🚨 Emergency SOS Alert
         </button>
-        <button style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border-subtle); background:rgba(255,255,255,0.05); color:#cbd5e1; font-weight:600; cursor:pointer;" onclick="cancelActiveTrip()">
+        <button id="btn_cancel_trip" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border-subtle); background:rgba(255,255,255,0.05); color:#cbd5e1; font-weight:600; cursor:pointer;" onclick="cancelActiveTrip()">
           Cancel Booking
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE RAZORPAY CHECKOUT SIMULATOR (Fallback / Offline / Demo Mode) -->
+  <div class="modal-overlay" id="razorpaySimulatorModal" style="z-index:2000;">
+    <div class="modal-dossier" style="max-width:440px; padding:24px; border:1px solid rgba(16,185,129,0.3); border-radius:20px; background:#080d1a;" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg, #0c2340, #0284c7); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:1rem;">
+            R
+          </div>
+          <div>
+            <div style="font-size:1rem; font-weight:800; color:#fff;">Razorpay Trusted Gateway</div>
+            <div style="font-size:0.75rem; color:#38bdf8;">DriverDost Chauffeurs Pvt Ltd</div>
+          </div>
+        </div>
+        <button class="modal-close" style="position:static; width:30px; height:30px;" onclick="closeRazorpaySimulator()">✕</button>
+      </div>
+
+      <!-- Amount Header -->
+      <div style="background:rgba(255,255,255,0.04); border-radius:12px; padding:14px; text-align:center; margin-bottom:16px;">
+        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Amount Payable</div>
+        <div style="font-size:2rem; font-weight:900; color:#34d399;" id="rzp_sim_amount">₹447</div>
+        <div style="font-size:0.75rem; color:#cbd5e1;" id="rzp_sim_desc">Booking #101 &bull; Bengaluru Chauffeur</div>
+      </div>
+
+      <!-- Method Tabs -->
+      <div style="display:flex; gap:6px; margin-bottom:16px;">
+        <div class="razorpay-method-tab active" id="tab_upi" onclick="switchRzpTab('upi')">UPI &amp; QR</div>
+        <div class="razorpay-method-tab" id="tab_card" onclick="switchRzpTab('card')">Card</div>
+        <div class="razorpay-method-tab" id="tab_net" onclick="switchRzpTab('net')">NetBanking</div>
+      </div>
+
+      <!-- UPI View -->
+      <div id="rzp_panel_upi" style="margin-bottom:18px;">
+        <div style="font-size:0.8rem; color:#cbd5e1; margin-bottom:10px;">Choose preferred UPI application:</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+          <div onclick="selectUpiApp('Google Pay', this)" class="tip-chip active" style="text-align:center; padding:10px;">🟢 Google Pay</div>
+          <div onclick="selectUpiApp('PhonePe', this)" class="tip-chip" style="text-align:center; padding:10px;">🟣 PhonePe</div>
+          <div onclick="selectUpiApp('Paytm UPI', this)" class="tip-chip" style="text-align:center; padding:10px;">🔵 Paytm</div>
+          <div onclick="selectUpiApp('BHIM', this)" class="tip-chip" style="text-align:center; padding:10px;">🟠 BHIM</div>
+        </div>
+        <div style="text-align:center; padding:10px; background:rgba(255,255,255,0.02); border-radius:8px; font-size:0.75rem; color:#94a3b8;">
+          📲 Instant UPI authorization via Razorpay UPI Intent
+        </div>
+      </div>
+
+      <!-- Card View -->
+      <div id="rzp_panel_card" style="display:none; margin-bottom:18px;">
+        <div style="margin-bottom:8px;">
+          <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Card Number</label>
+          <input type="text" class="form-input" value="4111 &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; 1111" readonly style="font-size:0.85rem; padding:8px 12px;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Expiry</label>
+            <input type="text" class="form-input" value="12/28" readonly style="font-size:0.85rem; padding:8px 12px;">
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">CVV</label>
+            <input type="text" class="form-input" value="•••" readonly style="font-size:0.85rem; padding:8px 12px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Netbanking View -->
+      <div id="rzp_panel_net" style="display:none; margin-bottom:18px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div class="tip-chip active" style="text-align:center; padding:8px;">HDFC Bank</div>
+          <div class="tip-chip" style="text-align:center; padding:8px;">ICICI Bank</div>
+          <div class="tip-chip" style="text-align:center; padding:8px;">SBI</div>
+          <div class="tip-chip" style="text-align:center; padding:8px;">Axis Bank</div>
+        </div>
+      </div>
+
+      <!-- Authorize Button -->
+      <button onclick="confirmSimulatorPayment()" style="width:100%; padding:14px; background:linear-gradient(135deg, #10b981, #059669); border:none; border-radius:12px; color:#fff; font-weight:800; font-size:1rem; cursor:pointer; box-shadow:0 4px 16px rgba(16,185,129,0.35);">
+        Authorize &amp; Pay <span id="rzp_sim_btn_amt">₹447</span>
+      </button>
+
+      <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:14px; font-size:0.72rem; color:#64748b;">
+        <span>🔒 Razorpay Sandbox Verified</span> &bull; <span>Instant Settlement</span>
       </div>
     </div>
   </div>
@@ -1199,20 +1451,20 @@
           return;
         }
 
-        const assignedDriver = ALL_DRIVERS.find(d => d.id === data.driverId);
+        const assignedDriver = data.driverId ? ALL_DRIVERS.find(d => d.id === data.driverId) : null;
         document.getElementById('booking_result').innerHTML = `
-          <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; margin-top:14px;">
+          <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); border-radius:12px; padding:16px; margin-top:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div>
-                <div style="color:var(--accent-emerald); font-weight:700; font-size:1.05rem;">
-                  🎉 Booking #${data.id} Confirmed!
+                <div style="color:#fbbf24; font-weight:700; font-size:1.05rem;">
+                  📡 Trip Request #${data.id} Dispatched!
                 </div>
                 <div style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">
-                  Chauffeur: <strong>${assignedDriver ? assignedDriver.name : 'Matched Chauffeur'}</strong> &bull; Total: <strong>₹${data.total}</strong>
+                  Status: <strong>Awaiting Chauffeur Acceptance</strong> &bull; Total Fare: <strong>₹${data.total}</strong>
                 </div>
               </div>
               <button onclick="openTripTracking(${data.id})" style="background:var(--primary-gold); color:#070b14; font-weight:800; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;">
-                🗺️ View Live Navigation
+                🗺️ Track Live Request
               </button>
             </div>
           </div>
@@ -1243,50 +1495,105 @@
         const data = await res.json();
         const b = data.booking;
         const d = data.driver;
+        const isDriverConfirmed = b.acceptedByDriver && d;
 
         document.getElementById('track_title').textContent = `Live Navigation: ${b.pickup.split(',')[0]} → ${b.destination.split(',')[0]}`;
         document.getElementById('track_booking_subtitle').textContent = `Booking #${b.id} &bull; Service: ${b.serviceType || 'Hourly'} &bull; Fare: ₹${b.total}`;
-        document.getElementById('track_status_lbl').textContent = b.status.replace(/_/g, ' ');
+        
+        const statusDisplay = b.status === 'SEARCHING_FOR_DRIVER' ? 'AWAITING CHAUFFEUR' : b.status.replace(/_/g, ' ');
+        document.getElementById('track_status_lbl').textContent = statusDisplay;
         document.getElementById('track_otp_val').textContent = b.otp || '4821';
 
         // Update Google Maps Link
         document.getElementById('track_gmaps_link').href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.status === 'TRIP_STARTED' ? b.destination : b.pickup)}`;
 
+        // Broadcast customer location to server so driver app gets real-time customer tracking
+        if (typeof window !== 'undefined' && (!window._lastCustomerLocSync || Date.now() - window._lastCustomerLocSync > 10000)) {
+          window._lastCustomerLocSync = Date.now();
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                fetch(`/api/bookings/${activeBookingId}/customer-location`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy,
+                    address: b.pickup
+                  })
+                }).catch(() => {});
+              },
+              () => {
+                if (b.pickupCoords) {
+                  fetch(`/api/bookings/${activeBookingId}/customer-location`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      lat: b.pickupCoords.lat,
+                      lng: b.pickupCoords.lng,
+                      address: b.pickup
+                    })
+                  }).catch(() => {});
+                }
+              },
+              { timeout: 5000, enableHighAccuracy: true }
+            );
+          }
+        }
+
         // Status Descriptions
         const descMap = {
-          'SEARCHING_FOR_DRIVER': 'Broadcasting trip request to verified chauffeurs within 3 km...',
-          'DRIVER_ASSIGNED': 'Chauffeur assigned and preparing vehicle departure.',
-          'DRIVER_ARRIVING': 'Chauffeur is currently driving to your pickup location.',
-          'DRIVER_ARRIVED': 'Chauffeur has arrived at your car! Share your 4-digit OTP below.',
-          'INSPECTION_COMPLETED': 'Vehicle pre-trip condition inspected & logged. Ready to roll.',
-          'TRIP_STARTED': 'Journey in progress. Professional chauffeur is piloting your car.',
-          'TRIP_COMPLETED': 'Trip safely completed! Thank you for choosing DriverDost.',
-          'CANCELLED': 'This booking has been cancelled.'
+          'SEARCHING_FOR_DRIVER': '📡 Trip request dispatched to nearby verified chauffeurs. Awaiting chauffeur acceptance...',
+          'DRIVER_ASSIGNED': '✅ Chauffeur confirmed and accepted! Assigned & preparing vehicle departure.',
+          'DRIVER_ARRIVING': '🚗 Chauffeur is currently driving to your pickup location.',
+          'DRIVER_ARRIVED': '📍 Chauffeur has arrived at your car! Share your 4-digit OTP below.',
+          'INSPECTION_COMPLETED': '🔍 Vehicle pre-trip condition inspected & logged. Ready to roll.',
+          'TRIP_STARTED': '🚀 Journey in progress. Professional chauffeur is piloting your car.',
+          'TRIP_COMPLETED': '🏁 Trip safely completed! Please complete fare settlement.',
+          'PAYMENT_COMPLETED': '✅ Fare settled. Thank you for choosing DriverDost.',
+          'CANCELLED': '❌ This booking has been cancelled.'
         };
         document.getElementById('track_status_desc').textContent = descMap[b.status] || b.status;
 
-        // Driver card
-        if (d) {
+        // Driver Card handling
+        if (isDriverConfirmed) {
           document.getElementById('track_drv_name').textContent = d.name;
           document.getElementById('track_drv_id').textContent = d.profileId;
           document.getElementById('track_drv_rating').textContent = `★ ${d.rating} (${d.trips} trips)`;
           document.getElementById('track_drv_photo').src = d.photo;
+          const callBtn = document.getElementById('track_call_btn');
+          if (callBtn) {
+            callBtn.style.display = 'inline-block';
+            callBtn.href = `tel:${d.phone || '9876543210'}`;
+          }
+        } else {
+          // Awaiting chauffeur acceptance
+          document.getElementById('track_drv_name').textContent = 'Matching Nearby Chauffeur...';
+          document.getElementById('track_drv_id').textContent = 'Offer Dispatched';
+          document.getElementById('track_drv_rating').textContent = '⚡ Awaiting Acceptance';
+          document.getElementById('track_drv_photo').src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80';
+          const callBtn = document.getElementById('track_call_btn');
+          if (callBtn) callBtn.style.display = 'none';
         }
 
         // Stepper Highlights
-        const steps = ['step_assigned', 'step_arriving', 'step_arrived', 'step_inspect', 'step_started'];
+        const steps = ['step_assigned', 'step_arriving', 'step_arrived', 'step_inspect', 'step_started', 'step_completed'];
         const activeIdx = {
+          'SEARCHING_FOR_DRIVER': -1,
           'DRIVER_ASSIGNED': 0,
           'DRIVER_ARRIVING': 1,
           'DRIVER_ARRIVED': 2,
           'INSPECTION_COMPLETED': 3,
           'TRIP_STARTED': 4,
-          'TRIP_COMPLETED': 5
-        }[b.status] || 0;
+          'TRIP_COMPLETED': 5,
+          'PAYMENT_COMPLETED': 5
+        }[b.status] ?? -1;
 
         steps.forEach((sId, idx) => {
           const el = document.getElementById(sId);
-          if (idx <= activeIdx) {
+          if (!el) return;
+          if (idx <= activeIdx && activeIdx >= 0) {
             el.style.background = 'rgba(16,185,129,0.2)';
             el.style.color = '#34d399';
             el.style.fontWeight = '700';
@@ -1297,6 +1604,51 @@
           }
         });
 
+        // Post-Ride Payment State Handling
+        const isRideEnded = b.status === 'TRIP_COMPLETED' || b.status === 'PAYMENT_COMPLETED';
+        const isPaid = b.paymentStatus === 'PAID';
+        const payCard = document.getElementById('track_payment_card');
+        const receiptCard = document.getElementById('track_paid_receipt_card');
+        const cancelBtn = document.getElementById('btn_cancel_trip');
+
+        currentBookingObj = b;
+
+        if (isRideEnded) {
+          if (cancelBtn) cancelBtn.style.display = 'none';
+
+          if (isPaid) {
+            payCard.style.display = 'none';
+            receiptCard.style.display = 'block';
+            document.getElementById('receipt_paid_val').textContent = `₹${b.totalPaid || b.total}`;
+            document.getElementById('receipt_subtext').textContent = `Settled via ${b.paymentMethod || 'Razorpay'} • Txn #${b.paymentId || 'PAID'}`;
+            if (b.rating) {
+              setDriverRating(b.rating);
+              document.getElementById('trip_review_text').value = b.review || '';
+              document.getElementById('trip_review_text').disabled = true;
+              document.getElementById('btn_submit_rating').style.display = 'none';
+              document.getElementById('rating_success_msg').style.display = 'block';
+            }
+          } else {
+            // Payment Due
+            payCard.style.display = 'block';
+            receiptCard.style.display = 'none';
+            document.getElementById('pay_hours_lbl').textContent = `${b.hours} hrs`;
+            document.getElementById('pay_rate_lbl').textContent = `₹${b.rate || 149}/hr`;
+            document.getElementById('pay_base_fare').textContent = `₹${b.base || b.total}`;
+            if (b.nightCharge) {
+              document.getElementById('pay_night_row').style.display = 'flex';
+              document.getElementById('pay_night_val').textContent = `₹${b.nightCharge}`;
+            } else {
+              document.getElementById('pay_night_row').style.display = 'none';
+            }
+            updatePayableDisplay();
+          }
+        } else {
+          payCard.style.display = 'none';
+          receiptCard.style.display = 'none';
+          if (cancelBtn) cancelBtn.style.display = 'block';
+        }
+
         // Car moving simulation on SVG
         const carIcon = document.getElementById('track_moving_car');
         const posMap = {
@@ -1305,7 +1657,8 @@
           'DRIVER_ARRIVED': 'translate(440, 40)',
           'INSPECTION_COMPLETED': 'translate(440, 40)',
           'TRIP_STARTED': 'translate(300, 65)',
-          'TRIP_COMPLETED': 'translate(460, 40)'
+          'TRIP_COMPLETED': 'translate(460, 40)',
+          'PAYMENT_COMPLETED': 'translate(460, 40)'
         };
         if (posMap[b.status]) carIcon.setAttribute('transform', posMap[b.status]);
 
@@ -1316,13 +1669,349 @@
           'DRIVER_ARRIVED': 'Arrived at your vehicle',
           'INSPECTION_COMPLETED': 'Inspection Verified',
           'TRIP_STARTED': 'En Route to Destination',
-          'TRIP_COMPLETED': 'Arrived at Destination'
+          'TRIP_COMPLETED': 'Trip Completed &bull; Payment Due',
+          'PAYMENT_COMPLETED': 'Trip Completed &bull; Settled'
         };
         document.getElementById('track_eta_badge').textContent = etaMap[b.status] || 'Active Dispatch';
 
       } catch (err) {
         console.error('Tracking sync error:', err);
       }
+    }
+
+    // Payment & Razorpay State
+    let currentBookingObj = null;
+    let selectedTipAmount = 0;
+    let currentRatingValue = 5;
+    let activeSimulatorOrder = null;
+    let activePaymentMethod = 'RAZORPAY_UPI';
+
+    function selectTip(amount, btnEl) {
+      selectedTipAmount = amount;
+      document.querySelectorAll('.tip-chip').forEach(c => c.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      document.getElementById('tip_selected_lbl').textContent = `+ ₹${amount}`;
+      updatePayableDisplay();
+    }
+
+    function updatePayableDisplay() {
+      if (!currentBookingObj) return;
+      const totalPayable = currentBookingObj.total + selectedTipAmount;
+      document.getElementById('pay_total_amount').textContent = `₹${totalPayable}`;
+      document.getElementById('btn_pay_razorpay').innerHTML = `
+        <span>💳 Pay ₹${totalPayable} with Razorpay</span>
+        <span style="font-size:0.78rem; background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:6px; font-weight:600;">UPI &bull; Cards &bull; NetBanking</span>
+      `;
+    }
+
+    // Initiate Razorpay Standard Checkout
+    async function initiateRazorpayPayment() {
+      if (!activeBookingId) return;
+      const btn = document.getElementById('btn_pay_razorpay');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span>⏳ Preparing Razorpay Gateway...</span>`;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/payments/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: activeBookingId, tip: selectedTipAmount })
+        });
+        const order = await res.json();
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (!res.ok) {
+          alert('Could not initialize payment: ' + (order.error || 'Server error'));
+          return;
+        }
+
+        activeSimulatorOrder = order;
+
+        // Try standard Razorpay Checkout modal
+        if (typeof Razorpay !== 'undefined' && order.keyId && !order.keyId.includes('demo') && !order.isMock) {
+          const options = {
+            key: order.keyId,
+            amount: order.amount,
+            currency: 'INR',
+            name: 'DriverDost Chauffeurs',
+            description: `Trip #${order.bookingId} (${currentBookingObj.hours} hrs) Settlement`,
+            image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=128&auto=format&fit=crop&q=80',
+            order_id: order.orderId,
+            prefill: {
+              name: order.customerName,
+              contact: order.customerPhone
+            },
+            theme: { color: '#10b981' },
+            handler: async function (response) {
+              await verifyPaymentWithBackend({
+                bookingId: order.bookingId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                tip: order.tip,
+                method: 'RAZORPAY_LIVE'
+              });
+            },
+            modal: {
+              ondismiss: function () {
+                console.log('Razorpay modal closed by customer');
+              }
+            }
+          };
+          const rzp = new Razorpay(options);
+          rzp.on('payment.failed', function (response) {
+            alert('Payment failed: ' + response.error.description);
+          });
+          rzp.open();
+        } else {
+          // Launch Built-in Razorpay Interactive Simulator
+          openRazorpaySimulator(order);
+        }
+      } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert('Payment service unavailable. Falling back to cash or QR.');
+      }
+    }
+
+    function openRazorpaySimulator(order) {
+      document.getElementById('rzp_sim_amount').textContent = `₹${order.amountRupees}`;
+      document.getElementById('rzp_sim_btn_amt').textContent = `₹${order.amountRupees}`;
+      document.getElementById('rzp_sim_desc').textContent = `Booking #${order.bookingId} • Bengaluru Professional Chauffeur`;
+      document.getElementById('razorpaySimulatorModal').classList.add('open');
+    }
+
+    function closeRazorpaySimulator() {
+      document.getElementById('razorpaySimulatorModal').classList.remove('open');
+    }
+
+    function switchRzpTab(tab) {
+      document.querySelectorAll('.razorpay-method-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab_' + tab).classList.add('active');
+      document.getElementById('rzp_panel_upi').style.display = tab === 'upi' ? 'block' : 'none';
+      document.getElementById('rzp_panel_card').style.display = tab === 'card' ? 'block' : 'none';
+      document.getElementById('rzp_panel_net').style.display = tab === 'net' ? 'block' : 'none';
+      activePaymentMethod = tab === 'upi' ? 'RAZORPAY_UPI' : (tab === 'card' ? 'RAZORPAY_CARD' : 'RAZORPAY_NETBANKING');
+    }
+
+    function selectUpiApp(appName, el) {
+      document.querySelectorAll('#rzp_panel_upi .tip-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      activePaymentMethod = `RAZORPAY_UPI_${appName.toUpperCase().replace(/\s+/g, '_')}`;
+    }
+
+    async function confirmSimulatorPayment() {
+      if (!activeSimulatorOrder) return;
+      closeRazorpaySimulator();
+
+      await verifyPaymentWithBackend({
+        bookingId: activeSimulatorOrder.bookingId,
+        razorpayOrderId: activeSimulatorOrder.orderId,
+        razorpayPaymentId: 'pay_rzp_' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+        razorpaySignature: 'mock_sig_valid',
+        tip: activeSimulatorOrder.tip,
+        method: activePaymentMethod
+      });
+    }
+
+    async function verifyPaymentWithBackend(payload) {
+      try {
+        const res = await fetch('/api/payments/razorpay/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          syncTrackingState();
+        } else {
+          alert('Verification error: ' + (data.error || 'Payment could not be verified.'));
+        }
+      } catch (err) {
+        alert('Network error verifying payment.');
+      }
+    }
+
+    // Direct Cash Payment Handler
+    async function payWithCash() {
+      if (!confirm(`Confirm paying ₹${(currentBookingObj?.total || 0) + selectedTipAmount} in Cash directly to the chauffeur?`)) return;
+      try {
+        const res = await fetch(`/api/bookings/${activeBookingId}/pay-cash`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tip: selectedTipAmount })
+        });
+        if (res.ok) {
+          syncTrackingState();
+        } else {
+          alert('Could not record cash payment.');
+        }
+      } catch (err) {
+        alert('Network error recording cash payment.');
+      }
+    }
+
+    function openDriverUpiQr() {
+      const amt = (currentBookingObj?.total || 447) + selectedTipAmount;
+      const upiUrl = `upi://pay?pa=driverdost@razorpay&pn=DriverDost%20Bengaluru&am=${amt}&cu=INR&tn=Booking_${activeBookingId}`;
+      const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`;
+      
+      const w = window.open('', '_blank', 'width=380,height=480');
+      w.document.write(`
+        <div style="font-family:sans-serif; text-align:center; padding:24px; background:#080d1a; color:#fff; min-height:100vh;">
+          <h2 style="color:#10b981; margin-bottom:4px;">Chauffeur Dynamic UPI QR</h2>
+          <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:16px;">Scan with GPay, PhonePe, Paytm, or BHIM</p>
+          <div style="background:#fff; padding:16px; border-radius:16px; display:inline-block; margin-bottom:16px;">
+            <img src="${qrApi}" style="width:200px; height:200px;" alt="UPI QR">
+          </div>
+          <div style="font-size:1.4rem; font-weight:800; color:#fbbf24;">Amount: ₹${amt}</div>
+          <div style="font-size:0.75rem; color:#cbd5e1; margin-top:6px;">Booking #${activeBookingId} • Instant Settlement</div>
+          <button onclick="window.close()" style="margin-top:20px; background:#10b981; border:none; color:#fff; font-weight:700; padding:10px 24px; border-radius:8px; cursor:pointer;">Done</button>
+        </div>
+      `);
+    }
+
+    // Driver Rating Stars
+    function setDriverRating(stars) {
+      currentRatingValue = stars;
+      const starSpans = document.querySelectorAll('#star_rating_box .star-btn');
+      starSpans.forEach((span, idx) => {
+        if (idx < stars) {
+          span.classList.add('selected');
+        } else {
+          span.classList.remove('selected');
+        }
+      });
+    }
+
+    async function submitTripRating() {
+      if (!activeBookingId) return;
+      const review = document.getElementById('trip_review_text').value;
+      const btn = document.getElementById('btn_submit_rating');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const res = await fetch(`/api/bookings/${activeBookingId}/rate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rating: currentRatingValue, review })
+        });
+        if (res.ok) {
+          btn.style.display = 'none';
+          document.getElementById('trip_review_text').disabled = true;
+          document.getElementById('rating_success_msg').style.display = 'block';
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Submit Rating & Review ★';
+        alert('Failed to save rating.');
+      }
+    }
+
+    // Tax Invoice Print View
+    function printTripReceipt() {
+      if (!currentBookingObj) return;
+      const b = currentBookingObj;
+      const w = window.open('', '_blank', 'width=700,height=750');
+      w.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>DriverDost Tax Invoice #${b.id}</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #10b981; padding-bottom: 20px; margin-bottom: 24px; }
+            .logo { font-size: 24px; font-weight: 800; color: #0f172a; }
+            .badge { background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 6px; font-weight: 700; font-size: 13px; }
+            table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+            th { background: #f8fafc; text-align: left; padding: 12px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+            td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+            .total-row { font-size: 18px; font-weight: 800; color: #0f172a; }
+            .footer { margin-top: 40px; font-size: 12px; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="logo">🚗 DriverDost Technologies</div>
+              <div style="font-size: 13px; color: #64748b;">Your Car • Our Verified Chauffeur</div>
+              <div style="font-size: 13px; color: #64748b;">Bengaluru, Karnataka &bull; GSTIN: 29AABCD1234E1Z5</div>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge">TAX INVOICE / RECEIPT</span>
+              <div style="font-weight: 700; font-size: 14px; margin-top: 8px;">Invoice #${b.id}</div>
+              <div style="font-size: 13px; color: #64748b;">Date: ${new Date().toLocaleDateString('en-IN')}</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; font-size: 14px;">
+            <div>
+              <strong>Billed To:</strong><br>
+              ${b.customerName}<br>
+              Phone: +91 ${b.customerPhone}
+            </div>
+            <div>
+              <strong>Trip Summary:</strong><br>
+              Pickup: ${b.pickup}<br>
+              Destination: ${b.destination}<br>
+              Chauffeur: ID #${b.driverId || 'Assigned'}
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Duration / Units</th>
+                <th>Rate (₹)</th>
+                <th style="text-align: right;">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Professional Chauffeur Personal Car Pilotage</td>
+                <td>${b.hours} Hours</td>
+                <td>₹${b.rate || 149} / hr</td>
+                <td style="text-align: right;">₹${b.base || b.total}</td>
+              </tr>
+              ${b.nightCharge ? `
+              <tr>
+                <td>Night Transit Surcharge (10:00 PM - 6:00 AM)</td>
+                <td>1 Flat</td>
+                <td>₹${b.nightCharge}</td>
+                <td style="text-align: right;">₹${b.nightCharge}</td>
+              </tr>` : ''}
+              ${b.tip ? `
+              <tr>
+                <td>Chauffeur Discretionary Gratuity (Direct to Driver)</td>
+                <td>1 Tip</td>
+                <td>₹${b.tip}</td>
+                <td style="text-align: right;">₹${b.tip}</td>
+              </tr>` : ''}
+              <tr class="total-row">
+                <td colspan="3">Total Paid in Full</td>
+                <td style="text-align: right; color: #15803d;">₹${b.totalPaid || b.total}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="background: #f1f5f9; padding: 14px; border-radius: 8px; font-size: 13px;">
+            <strong>Payment Method:</strong> ${b.paymentMethod || 'Razorpay Gateway'}<br>
+            <strong>Payment Reference ID:</strong> ${b.paymentId || 'N/A'}<br>
+            <strong>Status:</strong> Completed &amp; Fully Settled
+          </div>
+
+          <div class="footer">
+            Thank you for choosing DriverDost! This is a computer-generated tax receipt and requires no physical signature.<br>
+            24/7 Operations Support: support@driverdost.com &bull; Bengaluru Central
+          </div>
+          <script>window.onload = function() { window.print(); }<\/script>
+        </body>
+        </html>
+      `);
     }
 
     async function triggerCustomerSos() {
@@ -1391,6 +2080,13 @@
     // Initialize
     calculateFare();
     fetchDrivers();
+
+    // Check URL parameters for active booking tracking
+    const urlParams = new URLSearchParams(window.location.search);
+    const trackParam = urlParams.get('track') || urlParams.get('bookingId') || window.location.hash.replace('#', '');
+    if (trackParam && !isNaN(trackParam)) {
+      setTimeout(() => openTripTracking(Number(trackParam)), 300);
+    }
   </script>
 </body>
 </html>

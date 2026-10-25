@@ -184,6 +184,9 @@ module.exports = {
       hours: 3,
       transmission: 'Automatic',
       status: 'DRIVER_ASSIGNED',
+      paymentStatus: 'PENDING',
+      paymentMethod: null,
+      tip: 0,
       rate: 149,
       total: 447,
       driverEarnings: 358,
@@ -193,11 +196,18 @@ module.exports = {
       createdAt: new Date().toISOString()
     }
   ],
+  payments: [],
+  razorpayConfig: {
+    keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_driverdost_demo',
+    keySecret: process.env.RAZORPAY_KEY_SECRET || '',
+    mode: (process.env.RAZORPAY_KEY_ID && !process.env.RAZORPAY_KEY_ID.includes('demo')) ? 'live' : 'test',
+    merchantName: 'DriverDost Chauffeurs Pvt Ltd'
+  },
   incidents: [],
   applications: [],
   // Admin accounts: { id, name, username, phone, salt, passwordHash }
   admins: [],
   sessions: new Map(), // token -> { adminId, expiresAt, username }
   driverSessions: new Map(), // token -> { driverId, expiresAt, profileId }
-  nextId: { booking: 102, incident: 1, application: 1, admin: 1 }
+  nextId: { booking: 102, incident: 1, application: 1, admin: 1, payment: 1 }
 };

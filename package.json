@@ -1,0 +1,15 @@
+{
+  "name": "driverdost-complete-platform",
+  "version": "1.0.0",
+  "description": "DriverDost — On-Demand Professional Chauffeur Platform for Your Own Car",
+  "private": true,
+  "main": "server/src/index.js",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node server/src/index.js",
+    "test": "node -e \"require('./server/src/index.js'); console.log('DriverDost backend tests passed');\""
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <style>
     :root {
       --bg-dark: #080d1a;
@@ -415,6 +417,201 @@
       cursor: pointer;
     }
     .nav-item.active { color: #34d399; font-weight: 700; }
+
+    /* Leaflet Driver Cockpit Map & Customer Telemetry */
+    .driver-map-card {
+      background: #090d16;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    .driver-map-header {
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.9);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .driver-map-live-tag {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.04em;
+    }
+    .driver-map-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8;
+      animation: pulse 1.8s infinite;
+    }
+    #driver_trip_map {
+      height: 240px;
+      width: 100%;
+      background: #080d1a;
+      z-index: 1;
+    }
+    .driver-map-hud-bar {
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+    .cust-coord-tag {
+      font-family: monospace;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .customer-contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .contact-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .contact-btn-call {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+    .contact-btn-call:hover {
+      background: rgba(16, 185, 129, 0.25);
+    }
+    .contact-btn-wa {
+      background: rgba(37, 211, 102, 0.15);
+      color: #25d366;
+      border-color: rgba(37, 211, 102, 0.35);
+    }
+    .contact-btn-wa:hover {
+      background: rgba(37, 211, 102, 0.25);
+    }
+    .contact-btn-nav {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.3));
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .contact-btn-nav:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(14, 165, 233, 0.45));
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+    }
+
+    /* MANUAL TRIP CONTROL PANEL */
+    .manual-cockpit-box {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 14px 0 10px 0;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+    }
+    .manual-cockpit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .manual-tag {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+    .manual-stage-select {
+      width: 100%;
+      background: rgba(8, 13, 26, 0.95);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #f8fafc;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .manual-stage-select:focus {
+      border-color: #fbbf24;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+    }
+    .manual-btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .manual-action-btn {
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .manual-btn-arrived {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .manual-btn-arrived:hover, .manual-btn-arrived.active {
+      background: rgba(245, 158, 11, 0.35);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+    .manual-btn-start {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .manual-btn-start:hover, .manual-btn-start.active {
+      background: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    }
+    .manual-btn-complete {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35));
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.5);
+      font-size: 0.88rem;
+    }
+    .manual-btn-complete:hover, .manual-btn-complete.active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(5, 150, 105, 0.5));
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+    }
   </style>
 </head>
 <body>
@@ -440,6 +637,19 @@
     <!-- CONTENT -->
     <main class="app-content">
       
+      <!-- QUICK CHAUFFEUR SWITCHER -->
+      <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:12px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:700; white-space:nowrap;">Active Chauffeur:</span>
+        <select id="chauffeur_switcher" onchange="switchDriverProfile(this.value)" style="background:#0f172a; border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.8rem; font-weight:700; border-radius:8px; padding:5px 8px; cursor:pointer; width:100%; max-width:240px; outline:none;">
+          <option value="1">Ramesh Kumar (DM1001)</option>
+          <option value="2">Priya Sharma (DM1002)</option>
+          <option value="3">Mohammed Rafiq (DM1003)</option>
+          <option value="4">Anand Deshmukh (DM1004)</option>
+          <option value="5">Suresh Gowda (DM1005)</option>
+          <option value="6">Kavitha Reddy (DM1006)</option>
+        </select>
+      </div>
+
       <!-- DRIVER PROFILE -->
       <section class="profile-card">
         <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80" alt="Chauffeur Avatar" class="profile-avatar" id="drv_avatar">
@@ -573,37 +783,46 @@
     let isOnline = true;
     let currentDriver = null;
     let DRIVER_ID = 1;
+    let allDrivers = [];
 
     async function initDriverAuth() {
-      const token = localStorage.getItem('dm_driver_token');
-      const rawProfile = localStorage.getItem('dm_driver_profile');
-
-      if (rawProfile) {
-        try {
-          currentDriver = JSON.parse(rawProfile);
-          DRIVER_ID = Number(currentDriver.id);
-        } catch (e) {}
+      // 1. Fetch all registered chauffeur profiles from server
+      try {
+        const dRes = await fetch('/api/drivers');
+        if (dRes.ok) {
+          allDrivers = await dRes.json();
+          const switcher = document.getElementById('chauffeur_switcher');
+          if (switcher && allDrivers.length) {
+            switcher.innerHTML = allDrivers.map(d => `
+              <option value="${d.id}">${d.name} (${d.profileId || 'DM' + (1000 + d.id)})</option>
+            `).join('');
+          }
+        }
+      } catch (e) {
+        console.warn('Driver directory fetch fallback', e);
       }
 
-      if (token) {
-        try {
-          const res = await fetch('/api/driver/me', {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            currentDriver = data.driver;
-            DRIVER_ID = Number(currentDriver.id);
-            localStorage.setItem('dm_driver_profile', JSON.stringify(currentDriver));
-          } else if (res.status === 401) {
-            localStorage.removeItem('dm_driver_token');
-          }
-        } catch (e) {
-          console.warn('Session check fallback', e);
+      // 2. Check URL query params for ?id= or ?driverId=
+      const params = new URLSearchParams(window.location.search);
+      const urlDriverId = params.get('id') || params.get('driverId');
+
+      if (urlDriverId && !isNaN(Number(urlDriverId))) {
+        DRIVER_ID = Number(urlDriverId);
+      } else {
+        const rawProfile = localStorage.getItem('dm_driver_profile');
+        if (rawProfile) {
+          try {
+            const parsed = JSON.parse(rawProfile);
+            if (parsed && parsed.id) DRIVER_ID = Number(parsed.id);
+          } catch (e) {}
         }
       }
 
-      if (!currentDriver) {
+      // Match DRIVER_ID with profile
+      if (allDrivers.length) {
+        currentDriver = allDrivers.find(d => d.id === DRIVER_ID) || allDrivers[0];
+        DRIVER_ID = currentDriver.id;
+      } else if (!currentDriver) {
         currentDriver = {
           id: 1,
           profileId: 'DM1001',
@@ -619,8 +838,33 @@
         DRIVER_ID = 1;
       }
 
+      const switcher = document.getElementById('chauffeur_switcher');
+      if (switcher) switcher.value = String(DRIVER_ID);
+
       updateDriverProfileUI(currentDriver);
-      loadDriverState();
+      await loadDriverState();
+    }
+
+    async function switchDriverProfile(id) {
+      id = Number(id);
+      DRIVER_ID = id;
+      if (allDrivers.length) {
+        const found = allDrivers.find(d => d.id === id);
+        if (found) {
+          currentDriver = found;
+          localStorage.setItem('dm_driver_profile', JSON.stringify(currentDriver));
+          updateDriverProfileUI(currentDriver);
+        }
+      }
+      // Update browser URL query string without page reload
+      try {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('id', id);
+        window.history.replaceState({}, '', newUrl.toString());
+      } catch (e) {}
+
+      activeSettlementBookingId = null;
+      await loadDriverState();
     }
 
     function updateDriverProfileUI(d) {
@@ -640,22 +884,28 @@
       }
     }
 
+    let activeSettlementBookingId = null;
+
     async function loadDriverState() {
       try {
         const res = await fetch('/api/bookings');
         const bookings = await res.json();
         
-        // Find active booking for this driver
+        // Find active booking strictly for THIS driver:
+        // 1. Either already assigned to this driver: b.driverId === DRIVER_ID
+        // 2. OR offered to this driver to accept: (b.offeredDriverId === DRIVER_ID && b.status === 'SEARCHING_FOR_DRIVER')
         const activeBooking = bookings.find(b => 
-          (b.driverId === DRIVER_ID || !b.driverId) && 
-          !['TRIP_COMPLETED', 'CANCELLED'].includes(b.status)
+          ((b.driverId === DRIVER_ID) || (b.offeredDriverId === DRIVER_ID && b.status === 'SEARCHING_FOR_DRIVER')) && 
+          b.status !== 'CANCELLED' &&
+          (b.id === activeSettlementBookingId || (!['TRIP_COMPLETED', 'PAYMENT_COMPLETED'].includes(b.status)) || (b.status === 'TRIP_COMPLETED' && b.paymentStatus !== 'PAID'))
         );
 
         renderActiveTrip(activeBooking);
         renderHistory(bookings);
-        document.getElementById('trip_sync_time').textContent = 'Live ' + new Date().toLocaleTimeString();
+        const syncEl = document.getElementById('trip_sync_time');
+        if (syncEl) syncEl.textContent = 'Live ' + new Date().toLocaleTimeString();
       } catch (err) {
-        console.error(err);
+        console.error('loadDriverState error:', err);
       }
     }
 
@@ -731,23 +981,74 @@
             <div style="font-size:1.3rem; font-weight:900; color:#34d399; font-family:var(--font-heading);">₹${earnings}</div>
           </div>
 
-          <!-- SIMULATED GPS TURN-BY-TURN HUD (NAVIGATION) -->
-          <div class="nav-hud">
-            <div class="nav-hud-header">
-              <div class="nav-arrow">↗</div>
-              <div>
-                <div class="nav-instruct-main">In 350m, Turn Left on 100 Feet Rd</div>
-                <div class="nav-instruct-sub">Navigating to: ${b.status === 'TRIP_STARTED' ? b.destination : b.pickup}</div>
+          <!-- INTERACTIVE LIVE CUSTOMER TRACKING LEAFLET MAP -->
+          <div class="driver-map-card">
+            <div class="driver-map-header">
+              <div class="driver-map-live-tag">
+                <span class="driver-map-live-dot"></span>
+                LIVE CUSTOMER GPS TRACKING
               </div>
+              <button onclick="recenterMapOnCustomer()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:6px; cursor:pointer;">
+                🎯 Center Customer
+              </button>
             </div>
-            <div class="nav-stats-bar">
-              <span>Remaining: <strong>${b.status === 'TRIP_STARTED' ? '28.4 km' : '1.2 km'}</strong></span>
-              <span>Speed: <strong>32 km/h</strong></span>
-              <span style="color:#34d399;">ETA: <strong>${b.status === 'TRIP_STARTED' ? '42 mins' : '4 mins'}</strong></span>
+            <div id="driver_trip_map"></div>
+            <div class="driver-map-hud-bar">
+              <div>
+                <span style="color:var(--text-muted);">Distance to Customer: </span>
+                <strong id="cust_dist_txt" style="color:#fff;">1.2 km away</strong>
+              </div>
+              <div>
+                <span style="color:var(--text-muted);">ETA: </span>
+                <strong id="cust_eta_txt" style="color:#34d399;">~4 mins</strong>
+              </div>
             </div>
           </div>
 
-          <div class="route-display">
+          <!-- CUSTOMER GPS CONTACT & NAVIGATION QUICK BAR -->
+          <div class="customer-contact-grid">
+            <a href="tel:${b.customerPhone || '9876543210'}" class="contact-btn contact-btn-call">
+              📞 Call ${b.customerName ? b.customerName.split(' ')[0] : 'Customer'}
+            </a>
+            <a href="https://wa.me/91${b.customerPhone || '9876543210'}?text=${encodeURIComponent(`Hello ${b.customerName || 'Customer'}, this is your DriverDost verified chauffeur. I am en route to pick you up at ${b.pickup}.`)}" target="_blank" class="contact-btn contact-btn-wa">
+              💬 WhatsApp
+            </a>
+            <a id="driver_gmaps_btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.customerLocation ? `${b.customerLocation.lat},${b.customerLocation.lng}` : (b.pickupCoords ? `${b.pickupCoords.lat},${b.pickupCoords.lng}` : b.pickup))}" target="_blank" class="contact-btn contact-btn-nav">
+              🧭 Start Turn-by-Turn GPS Navigation (Google Maps)
+            </a>
+          </div>
+
+          <!-- MANUAL TRIP CONTROLS COCKPIT -->
+          <div class="manual-cockpit-box">
+            <div class="manual-cockpit-header">
+              <span class="manual-tag">⚡ MANUAL TRIP DISPATCH CONTROLS</span>
+              <span style="font-size:0.72rem; color:#94a3b8;">Chauffeur Override</span>
+            </div>
+
+            <label style="font-size:0.75rem; color:#cbd5e1; display:block; margin-bottom:4px; font-weight:600;">
+              Select Option / Trip Stage:
+            </label>
+            <select id="manual_stage_selector" class="manual-stage-select" onchange="handleManualStatusSelect(${b.id}, this.value)">
+              <option value="">-- Choose Manual Trip Action --</option>
+              <option value="arrived" ${b.status === 'DRIVER_ARRIVED' ? 'disabled' : ''}>📍 Option 1: Manual Arrival (Mark Arrived at Customer)</option>
+              <option value="start" ${b.status === 'TRIP_STARTED' ? 'disabled' : ''}>🚗 Option 2: Manual Start Trip (Bypass OTP)</option>
+              <option value="complete" ${['TRIP_COMPLETED', 'PAYMENT_COMPLETED'].includes(b.status) ? 'disabled' : ''}>🏁 Option 3: Manual Complete Trip (End Ride & Settle)</option>
+            </select>
+
+            <div class="manual-btn-grid">
+              <button class="manual-action-btn manual-btn-arrived ${b.status === 'DRIVER_ARRIVED' ? 'active' : ''}" onclick="manualArrival(${b.id})">
+                📍 ${b.status === 'DRIVER_ARRIVED' ? '✓ Marked Arrived' : 'Manual Arrival'}
+              </button>
+              <button class="manual-action-btn manual-btn-start ${b.status === 'TRIP_STARTED' ? 'active' : ''}" onclick="manualStartTrip(${b.id})">
+                🚗 ${b.status === 'TRIP_STARTED' ? '✓ In Progress' : 'Manual Start Trip'}
+              </button>
+              <button class="manual-action-btn manual-btn-complete ${['TRIP_COMPLETED', 'PAYMENT_COMPLETED'].includes(b.status) ? 'active' : ''}" onclick="manualCompleteTrip(${b.id})">
+                🏁 ${['TRIP_COMPLETED', 'PAYMENT_COMPLETED'].includes(b.status) ? '✓ Completed' : 'Manual Complete Trip & Settle'}
+              </button>
+            </div>
+          </div>
+
+          <div class="route-display" style="margin-top:12px;">
             <div class="route-point">
               <span class="point-dot dot-green"></span>
               <div><strong style="color:#fff">Pickup:</strong> ${b.pickup}</div>
@@ -758,19 +1059,13 @@
             </div>
           </div>
 
-          <div style="font-size:0.82rem; color:var(--accent-cyan); margin-bottom:16px; background:rgba(56,189,248,0.08); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between;">
+          <div style="font-size:0.82rem; color:var(--accent-cyan); margin-bottom:14px; background:rgba(56,189,248,0.08); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between;">
             <span>Customer: <strong>${b.customerName || 'Customer'}</strong></span>
             <span>OTP for Test: <strong style="color:#fff;">${b.otp || '4821'}</strong></span>
           </div>
 
-          <!-- DYNAMIC ACTION BUTTONS -->
+          <!-- STANDARD ACTIONS -->
           <div style="display:flex; flex-direction:column; gap:9px;">
-            
-            <!-- External GPS launch button -->
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.status === 'TRIP_STARTED' ? b.destination : b.pickup)}" target="_blank" class="btn-action btn-cyan" style="text-decoration:none;">
-              🗺️ Open in Google Maps GPS Navigation
-            </a>
-
             ${b.status === 'DRIVER_ASSIGNED' ? `
               <button class="btn-action btn-amber" onclick="markArriving(${b.id})">🚗 Mark En Route / Arriving at Pickup</button>
             ` : ''}
@@ -791,6 +1086,35 @@
               <button class="btn-action btn-green" onclick="completeTrip(${b.id})">🏁 Complete Trip &amp; Settle Fare</button>
             ` : ''}
 
+            ${(b.status === 'TRIP_COMPLETED' || b.status === 'PAYMENT_COMPLETED') ? `
+              <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); border-radius:14px; padding:16px; margin:14px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <span style="font-weight:800; color:#34d399; font-size:1.05rem;">
+                    ${b.paymentStatus === 'PAID' ? '✅ Trip Paid &amp; Settled!' : '⏳ Trip Completed &bull; Collect Fare'}
+                  </span>
+                  <span style="background:${b.paymentStatus === 'PAID' ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}; color:${b.paymentStatus === 'PAID' ? '#34d399' : '#fbbf24'}; padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">
+                    ${b.paymentStatus === 'PAID' ? 'PAID IN FULL' : 'PAYMENT DUE'}
+                  </span>
+                </div>
+                <div style="font-size:0.85rem; color:#cbd5e1; margin-bottom:12px;">
+                  ${b.paymentStatus === 'PAID' ? 
+                    `Customer paid via <strong>${b.paymentMethod || 'Razorpay Online'}</strong>. Total: <strong>₹${b.totalPaid || b.total}</strong> (Your Earnings: <strong>₹${b.driverEarnings}</strong> including tip). Credited to wallet!` : 
+                    `Trip Total: <strong>₹${b.total}</strong> &bull; Your 80% Share: <strong>₹${earnings}</strong>. Customer can pay via Razorpay Online, UPI QR, or Cash.`}
+                </div>
+                ${b.paymentStatus !== 'PAID' ? `
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button class="btn-action btn-green" onclick="driverCollectCash(${b.id})">💵 Collect ₹${b.total} Cash from Customer</button>
+                    <button class="btn-action btn-cyan" onclick="driverShowUpiQr(${b.id}, ${b.total})">📱 Show Customer UPI QR Code to Scan</button>
+                    <div style="font-size:0.75rem; color:#94a3b8; text-align:center;">
+                      🔄 Waiting for customer Razorpay payment... (Page auto-updates upon payment)
+                    </div>
+                  </div>
+                ` : `
+                  <button class="btn-action btn-green" onclick="dismissCompletedTrip()">✓ Dismiss &amp; Return to Ready Dispatch</button>
+                `}
+              </div>
+            ` : ''}
+
             <div class="action-btn-row">
               <button class="btn-action btn-reject" style="flex:1;" onclick="rejectBooking(${b.id})">Decline / Cancel</button>
               <button class="btn-action btn-sos" style="flex:2;" onclick="triggerSos(${b.id})">🚨 Emergency SOS</button>
@@ -799,24 +1123,44 @@
           </div>
         </div>
       `;
+
+      // Initialize or update live customer tracking Leaflet map
+      setTimeout(() => initOrUpdateDriverMap(b, currentDriver), 50);
     }
 
     function renderHistory(bookings) {
       const list = document.getElementById('booking_history_list');
-      const finished = bookings.filter(b => ['TRIP_COMPLETED', 'CANCELLED'].includes(b.status));
-      if (!finished.length) {
-        list.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem; padding:10px 0;">No completed trips yet.</div>`;
+      // Strictly isolate history to the active driver only
+      const myFinished = bookings.filter(b => b.driverId === DRIVER_ID && ['TRIP_COMPLETED', 'PAYMENT_COMPLETED', 'CANCELLED'].includes(b.status));
+
+      // Calculate dynamic earnings for this driver only
+      const myPaidTrips = bookings.filter(b => b.driverId === DRIVER_ID && b.paymentStatus === 'PAID');
+      const totalEarned = myPaidTrips.reduce((acc, b) => acc + (b.driverEarnings || Math.round((b.totalPaid || b.total) * 0.8)), 0);
+      const tripsCount = myPaidTrips.length;
+      const hoursCount = myPaidTrips.reduce((acc, b) => acc + (Number(b.hours) || 1), 0);
+
+      const earnTodayEl = document.getElementById('earn_today');
+      const earnTripsEl = document.getElementById('earn_trips');
+      const earnHrsEl = document.getElementById('earn_hrs');
+      if (earnTodayEl) earnTodayEl.textContent = `₹${totalEarned.toLocaleString('en-IN')}`;
+      if (earnTripsEl) earnTripsEl.textContent = tripsCount.toString();
+      if (earnHrsEl) earnHrsEl.textContent = `${hoursCount}h`;
+
+      if (!myFinished.length) {
+        list.innerHTML = `<div style="color:var(--text-muted); font-size:0.85rem; padding:10px 0;">No completed trips yet for this chauffeur.</div>`;
         return;
       }
-      list.innerHTML = finished.map(b => `
+      list.innerHTML = myFinished.map(b => `
         <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <div style="font-weight:700; color:#fff; font-size:0.9rem;">#${b.id} &bull; ${b.pickup.slice(0, 22)}...</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">${b.hours} hrs &bull; ${b.serviceType || 'Hourly'}</div>
+            <div style="font-weight:700; color:#fff; font-size:0.9rem;">#${b.id} &bull; ${b.pickup.slice(0, 20)}...</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${b.hours} hrs &bull; ${b.serviceType || 'Hourly'} &bull; ${b.paymentMethod || 'ONLINE'}</div>
           </div>
           <div style="text-align:right;">
             <div style="color:#34d399; font-weight:700; font-size:0.95rem;">₹${b.driverEarnings || Math.round(b.total*0.8)}</div>
-            <div style="font-size:0.7rem; color:var(--text-muted);">${b.status}</div>
+            <div style="font-size:0.7rem; color:${b.paymentStatus === 'PAID' ? '#10b981' : '#f59e0b'}; font-weight:700;">
+              ${b.paymentStatus === 'PAID' ? 'PAID ✓' : (b.status === 'CANCELLED' ? 'CANCELLED' : 'DUE')}
+            </div>
           </div>
         </div>
       `).join('');
@@ -846,13 +1190,21 @@
     }
 
     async function acceptBooking(id) {
-      await fetch(`/api/bookings/${id}/accept`, { method: 'POST' });
+      await fetch(`/api/bookings/${id}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: DRIVER_ID })
+      });
       loadDriverState();
     }
 
     async function rejectBooking(id) {
       if (confirm('Decline this trip request? It will be auto-reassigned to another verified driver.')) {
-        await fetch(`/api/bookings/${id}/reject`, { method: 'POST' });
+        await fetch(`/api/bookings/${id}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverId: DRIVER_ID })
+        });
         loadDriverState();
       }
     }
@@ -911,9 +1263,43 @@
 
     async function completeTrip(id) {
       if (confirm('Confirm trip completed and vehicle handed back safely to customer?')) {
+        activeSettlementBookingId = id;
         await fetch(`/api/bookings/${id}/complete`, { method: 'POST' });
         loadDriverState();
       }
+    }
+
+    async function driverCollectCash(id) {
+      if (!confirm('Confirm you have received the full trip fare in Cash from the customer?')) return;
+      await fetch(`/api/bookings/${id}/pay-cash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tip: 0 })
+      });
+      loadDriverState();
+    }
+
+    function driverShowUpiQr(id, amount) {
+      const upiUrl = `upi://pay?pa=driverdost@razorpay&pn=DriverDost%20Chauffeurs&am=${amount}&cu=INR&tn=Trip_${id}`;
+      const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`;
+      const w = window.open('', '_blank', 'width=380,height=480');
+      w.document.write(`
+        <div style="font-family:sans-serif; text-align:center; padding:24px; background:#080d1a; color:#fff; min-height:100vh;">
+          <h2 style="color:#10b981; margin-bottom:4px;">Chauffeur UPI QR</h2>
+          <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:16px;">Ask Customer to scan with any UPI App</p>
+          <div style="background:#fff; padding:16px; border-radius:16px; display:inline-block; margin-bottom:16px;">
+            <img src="${qrApi}" style="width:200px; height:200px;" alt="UPI QR">
+          </div>
+          <div style="font-size:1.4rem; font-weight:800; color:#fbbf24;">Amount: ₹${amount}</div>
+          <div style="font-size:0.75rem; color:#cbd5e1; margin-top:6px;">Booking #${id} • Instant Settlement</div>
+          <button onclick="window.close()" style="margin-top:20px; background:#10b981; border:none; color:#fff; font-weight:700; padding:10px 24px; border-radius:8px; cursor:pointer;">Done</button>
+        </div>
+      `);
+    }
+
+    function dismissCompletedTrip() {
+      activeSettlementBookingId = null;
+      loadDriverState();
     }
 
     async function triggerSos(id) {
@@ -930,7 +1316,180 @@
     }
 
     function closeModal(id) {
-      document.getElementById(id).classList.remove('open');
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('open');
+    }
+
+    let driverLeafletMap = null;
+    let customerMarker = null;
+    let driverMarker = null;
+    let routePolyline = null;
+    let currentMapBookingId = null;
+
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return Number((R * c).toFixed(1));
+    }
+
+    function initOrUpdateDriverMap(booking, driver) {
+      if (typeof L === 'undefined') return;
+      const mapEl = document.getElementById('driver_trip_map');
+      if (!mapEl) return;
+
+      const custLat = Number(booking.customerLocation?.lat || booking.pickupCoords?.lat || 12.9784);
+      const custLng = Number(booking.customerLocation?.lng || booking.pickupCoords?.lng || 77.6408);
+      const drvLat = Number(driver?.location?.lat || 12.9716);
+      const drvLng = Number(driver?.location?.lng || 77.5946);
+
+      const dist = getDistanceKm(drvLat, drvLng, custLat, custLng);
+      const etaMins = Math.max(2, Math.round((dist / 25) * 60));
+
+      const distEl = document.getElementById('cust_dist_txt');
+      const etaEl = document.getElementById('cust_eta_txt');
+      if (distEl) distEl.textContent = `${dist} km away`;
+      if (etaEl) etaEl.textContent = `~${etaMins} mins`;
+
+      const gmapsBtn = document.getElementById('driver_gmaps_btn');
+      if (gmapsBtn) {
+        gmapsBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${custLat},${custLng}`;
+      }
+
+      const customerIcon = L.divIcon({
+        className: 'custom-leaflet-marker',
+        html: `<div style="display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -100%);">
+          <div style="background:#080d1a; border:2px solid #38bdf8; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; white-space:nowrap; box-shadow:0 4px 12px rgba(56,189,248,0.4); margin-bottom:3px;">
+            🧑 ${booking.customerName || 'Customer'}
+          </div>
+          <div style="width:16px; height:16px; border-radius:50%; background:#38bdf8; border:3px solid #fff; box-shadow:0 0 14px #38bdf8; animation:pulse 1.8s infinite;"></div>
+        </div>`,
+        iconSize: [0, 0]
+      });
+
+      const driverIcon = L.divIcon({
+        className: 'custom-leaflet-marker',
+        html: `<div style="display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -100%);">
+          <div style="background:#080d1a; border:2px solid #10b981; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:9999px; white-space:nowrap; box-shadow:0 4px 12px rgba(16,185,129,0.4); margin-bottom:3px;">
+            🚗 You (Chauffeur)
+          </div>
+          <div style="width:16px; height:16px; border-radius:50%; background:#10b981; border:3px solid #fff; box-shadow:0 0 14px #10b981; animation:pulse 1.8s infinite;"></div>
+        </div>`,
+        iconSize: [0, 0]
+      });
+
+      if (!driverLeafletMap || currentMapBookingId !== booking.id || !mapEl._leaflet_id) {
+        if (driverLeafletMap) {
+          try { driverLeafletMap.remove(); } catch(e){}
+          driverLeafletMap = null;
+        }
+        currentMapBookingId = booking.id;
+
+        try {
+          driverLeafletMap = L.map('driver_trip_map', {
+            zoomControl: false,
+            attributionControl: false
+          }).setView([drvLat, drvLng], 14);
+
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19
+          }).addTo(driverLeafletMap);
+
+          customerMarker = L.marker([custLat, custLng], { icon: customerIcon }).addTo(driverLeafletMap);
+          driverMarker = L.marker([drvLat, drvLng], { icon: driverIcon }).addTo(driverLeafletMap);
+
+          routePolyline = L.polyline([[drvLat, drvLng], [custLat, custLng]], {
+            color: '#38bdf8',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '6, 8'
+          }).addTo(driverLeafletMap);
+
+          driverLeafletMap.fitBounds([[drvLat, drvLng], [custLat, custLng]], { padding: [40, 40] });
+        } catch (e) {
+          console.warn('Map initialization error:', e);
+        }
+      } else {
+        try {
+          if (customerMarker) customerMarker.setLatLng([custLat, custLng]);
+          if (driverMarker) driverMarker.setLatLng([drvLat, drvLng]);
+          if (routePolyline) routePolyline.setLatLngs([[drvLat, drvLng], [custLat, custLng]]);
+        } catch (e) {
+          console.warn('Map update error:', e);
+        }
+      }
+    }
+
+    function recenterMapOnCustomer() {
+      if (driverLeafletMap && customerMarker) {
+        driverLeafletMap.setView(customerMarker.getLatLng(), 16);
+      }
+    }
+
+    async function manualArrival(id) {
+      if (!confirm('📍 Confirm Manual Arrival:\n\nHave you arrived at the customer pickup location?')) return;
+      try {
+        const res = await fetch(`/api/bookings/${id}/arrived`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          alert('📍 Arrival confirmed! Customer has been notified.');
+          loadDriverState();
+        } else {
+          alert(data.error || 'Failed to record manual arrival');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function manualStartTrip(id) {
+      const opt = confirm('🚗 Manual Start Trip:\n\nClick OK to Start Trip immediately (or Cancel to enter Customer OTP instead).');
+      if (opt) {
+        try {
+          const res = await fetch(`/api/bookings/${id}/start`, { method: 'POST' });
+          const data = await res.json();
+          if (res.ok) {
+            alert('🚗 Trip started successfully! Safe driving.');
+            loadDriverState();
+          } else {
+            alert(data.error || 'Failed to start trip');
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        openOtpModal(id);
+      }
+    }
+
+    async function manualCompleteTrip(id) {
+      if (!confirm('🏁 Confirm Manual Complete:\n\nHas the journey completed and vehicle handed back safely to the customer?')) return;
+      try {
+        activeSettlementBookingId = id;
+        const res = await fetch(`/api/bookings/${id}/complete`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          alert('✅ Trip completed! Proceed to fare settlement / cash collection.');
+          loadDriverState();
+        } else {
+          alert(data.error || 'Failed to complete trip');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function handleManualStatusSelect(id, value) {
+      if (!value) return;
+      if (value === 'arrived') manualArrival(id);
+      else if (value === 'start') manualStartTrip(id);
+      else if (value === 'complete') manualCompleteTrip(id);
+      const sel = document.getElementById('manual_stage_selector');
+      if (sel) sel.value = '';
     }
 
     // Initialize authenticated chauffeur and poll every 3 seconds for updates
