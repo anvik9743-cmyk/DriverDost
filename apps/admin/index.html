@@ -354,36 +354,14 @@
 
   <main class="container">
 
-    <!-- AUTHENTICATION GATE (LOGIN / SETUP) -->
+    <!-- AUTHENTICATION GATE (LOGIN ONLY) -->
     <section id="gate" class="auth-gate">
-      <div id="setup" class="hidden">
-        <h1 class="auth-title">First-Time Admin Setup</h1>
-        <p class="auth-sub">No admin account found. Initialize the platform superuser credentials:</p>
-        <div class="form-group">
-          <label class="form-label">Full Name</label>
-          <input type="text" id="s_name" class="form-input" placeholder="e.g. Ramesh Admin" value="Ramesh Admin">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Username</label>
-          <input type="text" id="s_user" class="form-input" placeholder="e.g. admin" value="admin">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone Number (10 Digits)</label>
-          <input type="tel" id="s_phone" class="form-input" placeholder="e.g. 9876543210" value="9876543210">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password (Min 6 Characters)</label>
-          <input type="password" id="s_pass" class="form-input" placeholder="Create a strong password" value="admin1234">
-        </div>
-        <button class="btn-primary" onclick="register()">Create Superuser Account</button>
-      </div>
-
       <div id="login">
         <h1 class="auth-title">Administrator Login</h1>
         <p class="auth-sub">Authenticate using your <strong>Username OR Phone Number</strong>:</p>
         <div class="form-group">
           <label class="form-label">Username or Phone</label>
-          <input type="text" id="l_id" class="form-input" placeholder="admin or 9876543210">
+          <input type="text" id="l_id" class="form-input" placeholder="admin or 9876543210" value="admin">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
@@ -564,30 +542,10 @@
     async function check() {
       try {
         const s = await (await fetch('/api/admin/status', { headers: H() })).json();
-        document.getElementById('setup').classList.toggle('hidden', s.hasAdmin);
-        document.getElementById('login').classList.toggle('hidden', !s.hasAdmin);
         if (token && s.loggedIn) showDash();
       } catch (err) {
         document.getElementById('msg').textContent = 'Server offline. Please run the server.';
       }
-    }
-
-    async function register() {
-      const res = await fetch('/api/admin/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: document.getElementById('s_name').value,
-          username: document.getElementById('s_user').value,
-          phone: document.getElementById('s_phone').value,
-          password: document.getElementById('s_pass').value
-        })
-      });
-      const d = await res.json();
-      if (!res.ok) { document.getElementById('msg').textContent = d.error; return; }
-      token = d.token;
-      localStorage.setItem('dm_admin_token', token);
-      showDash();
     }
 
     async function login() {

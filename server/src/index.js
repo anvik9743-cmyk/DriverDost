@@ -489,17 +489,11 @@ async function handleRequest(req, res) {
     return json(res, 200, { ok: true, message: 'Logged out successfully' });
   }
 
-  // ---- Admin auth ----
-  if (p === '/api/admin/status' && req.method === 'GET')
-    return json(res, 200, { hasAdmin: store.admins.length > 0, loggedIn: !!auth.adminFromToken(req) });
-  if (p === '/api/admin/register' && req.method === 'POST') {
-    if (store.admins.length) return json(res, 403, { error: 'Admin already exists. Log in instead.' });
-    const b = await body(req);
-    if (!b.username || !b.phone || !b.password) return json(res, 400, { error: 'username, phone and password are required' });
-    if (String(b.password).length < 6) return json(res, 400, { error: 'Password must be at least 6 characters' });
-    const admin = await auth.createAdmin(b);
-    const s = await auth.login(b.username, b.password);
-    return json(res, 201, { ...s, admin: auth.publicAdmin(admin) });
+  if (p === '/api/admin/status' && req.method === 'GET') {
+    return json(res, 200, { hasAdmin: true, loggedIn: !!auth.adminFromToken(req) });
+  }
+  if (p === '/api/admin/register') {
+    return json(res, 403, { error: 'Admin account creation is disabled. Please log in with your administrator credentials.' });
   }
   if (p === '/api/admin/login' && req.method === 'POST') {
     const b = await body(req);
